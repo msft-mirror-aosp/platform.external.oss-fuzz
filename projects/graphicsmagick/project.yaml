@@ -1,0 +1,13 @@
+homepage: "http://www.graphicsmagick.org/"
+primary_contact: "bobjfriesenhahn@gmail.com"
+auto_ccs:
+    - troyjp@gmail.com
+    - alex.gaynor@gmail.com
+    - paul.l.kehrer@gmail.com
+sanitizers:
+    - address
+    - memory
+    - undefined
+architectures:
+    - x86_64
+    - i386

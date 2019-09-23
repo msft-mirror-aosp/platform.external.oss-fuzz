@@ -1,0 +1,18 @@
+homepage: "http://facebook.github.io/zstd/"
+primary_contact: "terrelln@fb.com"
+auto_ccs:
+  - "NickRTerrell@gmail.com"
+  - "Yann.collet.73@gmail.com"
+  - "cyan@fb.com"
+  - "felixh@fb.com"
+  - "dpc@fb.com"
+  - "bimbashrestha@fb.com"
+fuzzing_engines:
+  - libfuzzer
+  - afl
+  - dataflow
+sanitizers:
+  - address
+  - dataflow
+  - memory
+  - undefined
