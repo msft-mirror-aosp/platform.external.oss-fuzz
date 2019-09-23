@@ -1,0 +1,10 @@
+homepage: "http://libcxxabi.llvm.org/"
+primary_contact: "kcc@google.com"
+auto_ccs:
+  - "Erik.Pilkington@gmail.com"
+  - "akilsrin@apple.com"
+  - "bigcheesegs@gmail.com"
+sanitizers:
+  - address
+  - memory
+  - undefined
