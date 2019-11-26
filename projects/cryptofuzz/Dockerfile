@@ -39,6 +39,8 @@ RUN wget https://github.com/openssl/openssl/archive/OpenSSL_1_0_2-stable.zip
 RUN git clone --depth 1 https://github.com/google/cityhash.git
 RUN git clone --depth 1 https://github.com/golang/go
 RUN git clone --depth 1 https://github.com/randombit/botan.git
+RUN git clone --depth 1 https://github.com/wolfSSL/wolfssl.git
+RUN git clone --depth 1 https://github.com/ARMmbed/mbed-crypto.git
 RUN apt-get remove -y libunwind8
 
 COPY build.sh $SRC/
