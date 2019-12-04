@@ -1,4 +1,5 @@
-# Copyright 2017 Google Inc.
+#!/bin/bash -eu
+# Copyright 2019 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,13 +14,18 @@
 # limitations under the License.
 #
 ################################################################################
-FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && apt-get install -y curl
 
-# Get AOSP's version of sqlite, and get the fuzz target from upstream.
-# Once AOSP updates sqlite we'll be able to use the fuzz target from AOSP.
-RUN git clone https://android.googlesource.com/platform/external/sqlite
-RUN curl https://raw.githubusercontent.com/mackyle/sqlite/6bfffe7cfc8ff834e61f7d92a6509dbbca423b04/test/ossfuzz.c > sqlite_fuzz.c
+# build libpcap
+tar -xvzf libpcap-1.9.1.tar.gz
+cd libpcap-1.9.1
+./configure --disable-shared
+make -j$(nproc)
+make install
+cd ..
 
-# Copy the build file
-COPY build.sh $SRC/
+# build project
+cd ndpi
+sh autogen.sh
+./configure --enable-fuzztargets
+make
+ls fuzz/fuzz* | grep -v "\." | while read i; do cp $i $OUT/; done
