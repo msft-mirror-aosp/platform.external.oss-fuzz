@@ -22,9 +22,7 @@ RUN apt-get install -y git \
     python3 \
     zip \
     make \
-    libunwind8-dev \
     binutils-dev \
-    libblocksruntime-dev \
     libc6-dev-i386
 
 # Download and install the latest stable Go.
@@ -50,7 +48,7 @@ RUN go get github.com/dvyukov/go-fuzz/go-fuzz-build
 ENV SANITIZER_FLAGS_address "-fsanitize=address -fsanitize-address-use-after-scope"
 
 # Set of '-fsanitize' flags matches '-fno-sanitize-recover' + 'unsigned-integer-overflow'.
-ENV SANITIZER_FLAGS_undefined "-fsanitize=bool,array-bounds,float-divide-by-zero,function,integer-divide-by-zero,return,shift,signed-integer-overflow,unsigned-integer-overflow,vla-bound,vptr -fno-sanitize-recover=bool,array-bounds,float-divide-by-zero,function,integer-divide-by-zero,return,shift,signed-integer-overflow,vla-bound,vptr"
+ENV SANITIZER_FLAGS_undefined "-fsanitize=array-bounds,bool,builtin,float-divide-by-zero,function,integer-divide-by-zero,null,return,returns-nonnull-attribute,shift,signed-integer-overflow,unsigned-integer-overflow,unreachable,vla-bound,vptr -fno-sanitize-recover=array-bounds,bool,builtin,float-divide-by-zero,function,integer-divide-by-zero,null,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound,vptr"
 
 ENV SANITIZER_FLAGS_memory "-fsanitize=memory -fsanitize-memory-track-origins"
 
@@ -91,6 +89,9 @@ ENV LIB_FUZZING_ENGINE="/usr/lib/libFuzzingEngine.a"
 # TODO: remove after tpm2 catchup.
 ENV FUZZER_LDFLAGS ""
 
+ENV PRECOMPILED_DIR="/usr/lib/precompiled"
+RUN mkdir $PRECOMPILED_DIR
+
 WORKDIR $SRC
 
 RUN git clone -b stable https://github.com/google/AFL.git afl
@@ -102,6 +103,8 @@ RUN mkdir honggfuzz && \
     rm -rf $SRC/oss-fuzz.tar.gz
 
 COPY compile compile_afl compile_dataflow compile_libfuzzer compile_honggfuzz \
-    srcmap write_labels.py /usr/local/bin/
+    precompile_honggfuzz srcmap write_labels.py /usr/local/bin/
+
+RUN precompile_honggfuzz
 
 CMD ["compile"]
