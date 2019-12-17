@@ -90,6 +90,55 @@ then
 fi
 
 ##############################################################################
+# Compile mbed crypto
+cd $SRC/mbed-crypto/
+scripts/config.pl set MBEDTLS_PLATFORM_MEMORY
+if [[ $CFLAGS == *sanitize=memory* ]]
+then
+    scripts/config.pl unset MBEDTLS_HAVE_ASM
+    scripts/config.pl unset MBEDTLS_PADLOCK_C
+    scripts/config.pl unset MBEDTLS_AESNI_C
+fi
+mkdir build/
+cd build/
+cmake .. -DENABLE_PROGRAMS=0 -DENABLE_TESTING=0
+make -j$(nproc) >/dev/null 2>&1
+export MBEDTLS_LIBMBEDCRYPTO_A_PATH="$SRC/mbed-crypto/build/library/libmbedcrypto.a"
+export MBEDTLS_INCLUDE_PATH="$SRC/mbed-crypto/include"
+export CXXFLAGS="$CXXFLAGS -DCRYPTOFUZZ_MBEDTLS"
+# Compile Cryptofuzz mbed crypto module
+cd $SRC/cryptofuzz/modules/mbedtls
+make -B
+
+##############################################################################
+# Compile wolfCrypt
+cd $SRC/wolfssl
+autoreconf -ivf
+
+export WOLFCRYPT_CONFIGURE_PARAMS="--enable-static --enable-md2 --enable-md4 --enable-ripemd --enable-blake2 --enable-blake2s --enable-pwdbased --enable-scrypt --enable-hkdf --enable-cmac --enable-arc4 --enable-camellia --enable-rabbit --enable-aesccm --enable-aesctr --enable-hc128 --enable-xts --enable-des3 --enable-idea --enable-x963kdf --enable-harden"
+
+if [[ $CFLAGS = *sanitize=memory* ]]
+then
+    export WOLFCRYPT_CONFIGURE_PARAMS="$WOLFCRYPT_CONFIGURE_PARAMS -disable-asm"
+fi
+
+if [[ $CFLAGS = *-m32* ]]
+then
+    export WOLFCRYPT_CONFIGURE_PARAMS="$WOLFCRYPT_CONFIGURE_PARAMS -disable-fastmath"
+fi
+
+./configure $WOLFCRYPT_CONFIGURE_PARAMS
+make -j$(nproc) >/dev/null 2>&1
+
+export CXXFLAGS="$CXXFLAGS -DCRYPTOFUZZ_WOLFCRYPT"
+export WOLFCRYPT_LIBWOLFSSL_A_PATH="$SRC/wolfssl/src/.libs/libwolfssl.a"
+export WOLFCRYPT_INCLUDE_PATH="$SRC/wolfssl"
+
+# Compile Cryptofuzz wolfcrypt (without assembly) module
+cd $SRC/cryptofuzz/modules/wolfcrypt
+make -B
+
+##############################################################################
 # Compile Botan
 cd $SRC/botan
 if [[ $CFLAGS != *-m32* ]]
@@ -271,6 +320,10 @@ then
     cp $SRC/cryptofuzz-corpora/libressl_latest.zip $OUT/cryptofuzz-libressl-noasm_seed_corpus.zip
 fi
 
+# OpenSSL can currently not be used together with wolfCrypt due to symbol collisions
+export SAVE_CXXFLAGS="$CXXFLAGS"
+export CXXFLAGS=${CXXFLAGS/-DCRYPTOFUZZ_WOLFCRYPT/}
+
 ##############################################################################
 if [[ $CFLAGS != *sanitize=memory* ]]
 then
@@ -333,6 +386,8 @@ cp $SRC/cryptofuzz/cryptofuzz-dict.txt $OUT/cryptofuzz-openssl-noasm.dict
 # Copy seed corpus
 cp $SRC/cryptofuzz-corpora/openssl_latest.zip $OUT/cryptofuzz-openssl-noasm_seed_corpus.zip
 
+export CXXFLAGS="$SAVE_CXXFLAGS"
+
 ##############################################################################
 if [[ $CFLAGS != *sanitize=memory* && $CFLAGS != *-m32* ]]
 then
@@ -388,6 +443,10 @@ cp $SRC/cryptofuzz/cryptofuzz-dict.txt $OUT/cryptofuzz-boringssl-noasm.dict
 # Copy seed corpus
 cp $SRC/cryptofuzz-corpora/boringssl_latest.zip $OUT/cryptofuzz-boringssl-noasm_seed_corpus.zip
 
+
+# OpenSSL 1.1.0 can currently not be used together with wolfCrypt due to symbol collisions
+export SAVE_CXXFLAGS="$CXXFLAGS"
+export CXXFLAGS=${CXXFLAGS/-DCRYPTOFUZZ_WOLFCRYPT/}
 
 ##############################################################################
 cd $SRC;
@@ -449,12 +508,15 @@ LIBFUZZER_LINK="$LIB_FUZZING_ENGINE" CXXFLAGS="$CXXFLAGS -I $SRC/openssl-OpenSSL
 # Generate dictionary
 ./generate_dict
 
+
 # Copy fuzzer
 cp $SRC/cryptofuzz/cryptofuzz $OUT/cryptofuzz-openssl-110-noasm
 # Copy dictionary
 cp $SRC/cryptofuzz/cryptofuzz-dict.txt $OUT/cryptofuzz-openssl-110-noasm.dict
 # Copy seed corpus
 cp $SRC/cryptofuzz-corpora/openssl_latest.zip $OUT/cryptofuzz-openssl-110-noasm_seed_corpus.zip
+
+export CXXFLAGS="$SAVE_CXXFLAGS"
 ##############################################################################
 cd $SRC;
 unzip OpenSSL_1_0_2-stable.zip

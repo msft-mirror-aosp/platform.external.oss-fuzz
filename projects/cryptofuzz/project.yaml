@@ -19,6 +19,9 @@ auto_ccs:
     - "ppzgs1@gmail.com"
     - "jack.lloyd@gmail.com"
     - "shane.lontis@hotmail.com"
+    - "david@wolfssl.com"
+    - "kaleb@wolfssl.com"
+    - "jacob@wolfssl.com"
 sanitizers:
  - address
  - undefined
