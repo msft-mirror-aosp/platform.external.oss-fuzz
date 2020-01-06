@@ -7,6 +7,9 @@ auto_ccs:
   - "alessandro.gario@gmail.com"
   - "tom@ritter.vg"
   - "mhl@fb.com"
+  - "sharvil@sharvilshah.com"
+  - "gellerbedoya@gmail.com"
+  - "stefano.bonicatti@gmail.com"
 sanitizers:
  - address
 fuzzing_engines:
