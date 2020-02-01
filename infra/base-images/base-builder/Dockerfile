@@ -68,7 +68,7 @@ ENV COVERAGE_FLAGS="-fsanitize=fuzzer-no-link"
 ENV COVERAGE_FLAGS_coverage "-fprofile-instr-generate -fcoverage-mapping -pthread -Wl,--no-as-needed -Wl,-ldl -Wl,-lm -Wno-unused-command-line-argument"
 
 # Coverage isntrumentation flags for dataflow builds.
-ENV COVERAGE_FLAGS_dataflow="-fsanitize-coverage=trace-pc-guard,pc-table,func,trace-cmp"
+ENV COVERAGE_FLAGS_dataflow="-fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp"
 
 # Default sanitizer, fuzzing engine and architecture to use.
 ENV SANITIZER="address"
@@ -103,6 +103,8 @@ RUN mkdir honggfuzz && \
 
 COPY compile compile_afl compile_dataflow compile_libfuzzer compile_honggfuzz \
     precompile_honggfuzz srcmap write_labels.py /usr/local/bin/
+
+COPY detect_repo.py /src
 
 RUN precompile_honggfuzz
 
