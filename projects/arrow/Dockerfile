@@ -1,5 +1,4 @@
-#!/bin/bash -eu
-# Copyright 2016 Google Inc.
+# Copyright 2020 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,10 +14,16 @@
 #
 ################################################################################
 
-./autogen.sh
-./configure --disable-shared
-make clean -s
-make -j$(nproc) -s
+FROM gcr.io/oss-fuzz-base/base-builder
+MAINTAINER dev@arrow.apache.org
 
-./test/fuzzers/build_google_oss_fuzzers.sh
-./test/fuzzers/build_seed_corpus.sh
+ENV DEBIAN_FRONTEND noninteractive
+RUN apt-get update -y -q && \
+    apt-get update -y -q && \
+    apt-get install -y -q --no-install-recommends \
+        cmake \
+        ninja-build \
+        python3
+
+RUN git clone --depth=1 https://github.com/apache/arrow.git $SRC/arrow
+COPY build.sh $SRC/
