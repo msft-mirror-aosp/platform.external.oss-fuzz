@@ -17,79 +17,79 @@ This module is allows each of the OSS Fuzz projects fuzzers to be built
 from a specific point in time. This feature can be used for implementations
 like continuious integration fuzzing and bisection to find errors
 """
+import os
+import collections
+import logging
 import re
 
 import helper
-import repo_manager
+import utils
+
+BuildData = collections.namedtuple(
+    'BuildData', ['project_name', 'engine', 'sanitizer', 'architecture'])
 
 
-def build_fuzzer_from_commit(project_name,
-                             commit,
-                             local_store_path,
-                             engine='libfuzzer',
-                             sanitizer='address',
-                             architecture='x86_64',
-                             old_repo_manager=None):
+def build_fuzzers_from_commit(commit, build_repo_manager, build_data):
   """Builds a OSS-Fuzz fuzzer at a  specific commit SHA.
 
   Args:
-    project_name: The OSS-Fuzz project name
-    commit: The commit SHA to build the fuzzers at
-    local_store_path: The full file path of a place where a temp git repo is stored
-    engine: The fuzzing engine to be used
-    sanitizer: The fuzzing sanitizer to be used
-    architecture: The system architiecture to be used for fuzzing
-
+    commit: The commit SHA to build the fuzzers at.
+    build_repo_manager: The OSS-Fuzz project's repo manager to be built at.
+    build_data: A struct containing project build information.
   Returns:
-    0 on successful build 1 on failure
+    0 on successful build or error code on failure.
   """
-  if not old_repo_manager:
-    inferred_url = infer_main_repo(project_name, local_store_path, commit)
-    old_repo_manager = repo_manager.RepoManager(inferred_url, local_store_path)
-  old_repo_manager.checkout_commit(commit)
-  return helper.build_fuzzers_impl(
-      project_name=project_name,
-      clean=True,
-      engine=engine,
-      sanitizer=sanitizer,
-      architecture=architecture,
-      env_to_add=None,
-      source_path=old_repo_manager.repo_dir)
+  build_repo_manager.checkout_commit(commit)
+  return helper.build_fuzzers_impl(project_name=build_data.project_name,
+                                   clean=True,
+                                   engine=build_data.engine,
+                                   sanitizer=build_data.sanitizer,
+                                   architecture=build_data.architecture,
+                                   env_to_add=None,
+                                   source_path=build_repo_manager.repo_dir,
+                                   mount_location=os.path.join(
+                                       '/src', build_repo_manager.repo_name))
 
 
-def infer_main_repo(project_name, local_store_path, example_commit=None):
-  """Tries to guess the main repo a project based on the Dockerfile.
+def detect_main_repo(project_name, repo_name=None, commit=None):
+  """Checks a docker image for the main repo of an OSS-Fuzz project.
 
-  NOTE: This is a fragile implementation and only works for git
+  Note: The default is to use the repo name to detect the main repo.
+
   Args:
-    project_name: The OSS-Fuzz project that you are checking the repo of
-    example_commit: A commit that is in the main repos tree
+    project_name: The name of the oss-fuzz project.
+    repo_name: The name of the main repo in an OSS-Fuzz project.
+    commit: A commit SHA that is associated with the main repo.
+    src_dir: The location of the projects source on the docker image.
+
   Returns:
-    The guessed repo url path or None on failue
+    The repo's origin, the repo's path.
   """
-  if not helper.check_project_exists(project_name):
-    return None
-  docker_path = helper.get_dockerfile_path(project_name)
-  with open(docker_path, 'r') as file_path:
-    lines = file_path.read()
-    # Use generic git format and project name to guess main repo
-    if example_commit is None:
-      repo_url = re.search(
-          r'\b(?:http|https|git)://[^ ]*' + re.escape(project_name) +
-          r'(.git)?', lines)
-      if repo_url:
-        return repo_url.group(0)
-    else:
-      # Use example commit SHA to guess main repo
-      for clone_command in re.findall('.*clone.*', lines):
-        repo_url = re.search(r'\b(?:https|http|git)://[^ ]*',
-                             clone_command).group(0)
-        print(repo_url)
-        try:
-          test_repo_manager = repo_manager.RepoManager(repo_url.rstrip(),
-                                                       local_store_path)
-          if test_repo_manager.commit_exists(example_commit):
-            return repo_url
-        except:
-          pass
-    return None
+
+  if not repo_name and not commit:
+    logging.error(
+        'Error: can not detect main repo without a repo_name or a commit.')
+    return None, None
+  if repo_name and commit:
+    logging.info(
+        'Both repo name and commit specific. Using repo name for detection.')
+
+  # Change to oss-fuzz main directory so helper.py runs correctly.
+  utils.chdir_to_root()
+  if not helper.build_image_impl(project_name):
+    logging.error('Error: building %s image failed.', project_name)
+    return None, None
+  docker_image_name = 'gcr.io/oss-fuzz/' + project_name
+  command_to_run = [
+      'docker', 'run', '--rm', '-t', docker_image_name, 'python3',
+      os.path.join('/src', 'detect_repo.py')
+  ]
+  if repo_name:
+    command_to_run.extend(['--repo_name', repo_name])
+  else:
+    command_to_run.extend(['--example_commit', commit])
+  out, _ = utils.execute(command_to_run)
+  match = re.search(r'\bDetected repo: ([^ ]+) ([^ ]+)', out.rstrip())
+  if match and match.group(1) and match.group(2):
+    return match.group(1), match.group(2)
+  return None, None
