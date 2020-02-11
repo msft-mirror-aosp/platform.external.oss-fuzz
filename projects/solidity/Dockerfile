@@ -27,11 +27,9 @@ RUN git clone --depth 1 https://github.com/ethereum/solidity-fuzzing-corpus.git
 RUN git clone --recursive -b boost-1.69.0 https://github.com/boostorg/boost.git \
     boost
 RUN git clone --depth 1 https://github.com/google/libprotobuf-mutator.git
-RUN git clone --branch="v0.1.0" --recurse-submodules \
+RUN git clone --branch="v0.4.0" --recurse-submodules \
     https://github.com/ethereum/evmone.git
-RUN git clone --branch="v0.2.0" https://github.com/chfast/intx.git
-RUN git clone --branch="v0.4.4" https://github.com/chfast/ethash.git
-RUN git clone --branch="Z3-4.8.5" https://github.com/Z3Prover/z3.git
+RUN git clone --branch="z3-4.8.7" https://github.com/Z3Prover/z3.git
 
 # Install statically built dependencies in "/usr" directory
 # Install boost
@@ -64,29 +62,11 @@ RUN cd $SRC/evmone; \
     ninja; \
     ninja install;
 
-# Install intx
-RUN cd $SRC/intx; \
-    mkdir -p build; \
-    cd build; \
-    cmake .. -G Ninja -DBUILD_SHARED_LIBS=OFF -DINTX_TESTING=OFF \
-    -DINTX_BENCHMARKING=OFF -DCMAKE_INSTALL_PREFIX="/usr"; \
-    ninja; \
-    ninja install;
-
-# Install ethash
-RUN cd $SRC/ethash; \
-    mkdir -p build; \
-    cd build; \
-    cmake .. -G Ninja -DBUILD_SHARED_LIBS=OFF -DETHASH_BUILD_TESTS=OFF \
-    -DCMAKE_INSTALL_PREFIX="/usr"; \
-    ninja; \
-    ninja install;
-
 # Install Z3
 RUN cd $SRC/z3; \
     mkdir -p build; \
     cd build; \
-    LDFLAGS=$CXXFLAGS cmake -DBUILD_LIBZ3_SHARED=OFF -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..; \
+    LDFLAGS=$CXXFLAGS cmake -DZ3_BUILD_LIBZ3_SHARED=OFF -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..; \
     make libz3 -j; \
     make install;
 
