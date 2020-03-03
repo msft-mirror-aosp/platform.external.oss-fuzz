@@ -21,6 +21,7 @@ a python API and manage the current state of the git repo.
     r_man =  RepoManager('https://github.com/google/oss-fuzz.git')
     r_man.checkout('5668cc422c2c92d38a370545d3591039fb5bb8d4')
 """
+import logging
 import os
 import shutil
 
@@ -50,7 +51,7 @@ class RepoManager:
     if repo_name:
       self.repo_name = repo_name
     else:
-      self.repo_name = os.path.basename(self.repo_url).strip('.git')
+      self.repo_name = os.path.basename(self.repo_url).replace('.git', '')
     self.repo_dir = os.path.join(self.base_dir, self.repo_name)
     self._clone()
 
@@ -63,8 +64,8 @@ class RepoManager:
     if not os.path.exists(self.base_dir):
       os.makedirs(self.base_dir)
     self.remove_repo()
-    out, err = utils.execute(['git', 'clone', self.repo_url, self.repo_name],
-                             location=self.base_dir)
+    out, _, _ = utils.execute(['git', 'clone', self.repo_url, self.repo_name],
+                              location=self.base_dir)
     if not self._is_git_repo():
       raise ValueError('%s is not a git repo' % self.repo_url)
 
@@ -89,9 +90,26 @@ class RepoManager:
     if not commit.rstrip():
       return False
 
-    _, err_code = utils.execute(['git', 'cat-file', '-e', commit],
-                                self.repo_dir)
+    _, _, err_code = utils.execute(['git', 'cat-file', '-e', commit],
+                                   self.repo_dir)
     return not err_code
+
+  def get_git_diff(self):
+    """Gets a list of files that have changed from the repo head.
+
+    Returns:
+      A list of changed file paths or None on Error.
+    """
+    self.fetch_unshallow()
+    out, err_msg, err_code = utils.execute(
+        ['git', 'diff', '--name-only', 'origin...'], self.repo_dir)
+    if err_code:
+      logging.error('Git diff failed with error message %s.', err_msg)
+      return None
+    if not out:
+      logging.error('No diff was found.')
+      return None
+    return [line for line in out.splitlines() if line]
 
   def get_current_commit(self):
     """Gets the current commit SHA of the repo.
@@ -99,9 +117,9 @@ class RepoManager:
     Returns:
       The current active commit SHA.
     """
-    out, _ = utils.execute(['git', 'rev-parse', 'HEAD'],
-                           self.repo_dir,
-                           check_result=True)
+    out, _, _ = utils.execute(['git', 'rev-parse', 'HEAD'],
+                              self.repo_dir,
+                              check_result=True)
     return out.strip('\n')
 
   def get_commit_list(self, old_commit, new_commit):
@@ -125,7 +143,7 @@ class RepoManager:
       raise ValueError('The new commit %s does not exist' % new_commit)
     if old_commit == new_commit:
       return [old_commit]
-    out, err_code = utils.execute(
+    out, _, err_code = utils.execute(
         ['git', 'rev-list', old_commit + '..' + new_commit], self.repo_dir)
     commits = out.split('\n')
     commits = [commit for commit in commits if commit]
