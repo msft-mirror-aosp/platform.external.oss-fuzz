@@ -26,9 +26,8 @@ sed -i -e "s/QMAKE_CFLAGS_OPTIMIZE_FULL = -O3/QMAKE_CFLAGS_OPTIMIZE_FULL = -O1/g
 
 # build project
 cd $WORK
-MAKEFLAGS=-j$(nproc) $SRC/qt/configure -platform linux-clang-libc++ -static -opensource -confirm-license -no-opengl -nomake tests -nomake examples -prefix $OUT
+MAKEFLAGS=-j$(nproc) $SRC/qt/configure -platform linux-clang-libc++ -static -opensource -confirm-license -no-opengl -nomake tests -nomake examples -prefix $PWD/qtbase
 make -j$(nproc)
-make install
 
 # prepare corpus files
 zip -j $WORK/html $SRC/qtqa/fuzzing/testcases/html/*
@@ -38,28 +37,46 @@ zip -j $WORK/xml $SRC/qtqa/fuzzing/testcases/xml/* /usr/share/afl/testcases/othe
 # build fuzzers
 
 build_fuzzer() {
-    local module=$1
-    local proFilePath=$2
-    local format=${3-""}
-    local dictionary=${4-""}
+    local nameScheme=$1
+    local module=$2
+    local proFilePath=$3
+    local format=${4-""}
+    local dictionary=${5-""}
     local proFileName=${proFilePath##*/}
     local exeName=${proFileName%%.*}
+    local proFileDir=${proFilePath%/*}
+    local targetName="$module"_${proFileDir//\//_}
     mkdir build_fuzzer
     cd build_fuzzer
-    $OUT/bin/qmake $SRC/qt/$module/tests/libfuzzer/$proFilePath
+    $WORK/qtbase/bin/qmake $SRC/qt/$module/tests/libfuzzer/$proFilePath
     make -j$(nproc)
-    mv $exeName $OUT
+
+    # use old names of fuzzers, so open issues don't change state accidentally
+    local lowercaseExeName=$exeName
+    if [ "$exeName" == "setmarkdown" ]; then
+        exeName=setMarkdown
+    elif [ "$exeName" == "beginlayout" ]; then
+        exeName=beginLayout
+    fi
+    if [ "$lowercaseExeName" != "$exeName" ]; then
+        mv $lowercaseExeName $exeName
+    fi
+    if [ "$nameScheme" == "old" ]; then
+        targetName="$exeName"
+    fi
+
+    mv $exeName $OUT/$targetName
     if [ -n "$format" ]; then
-        cp $WORK/$format.zip $OUT/"$exeName"_seed_corpus.zip
+        cp $WORK/$format.zip $OUT/"$targetName"_seed_corpus.zip
     fi
     if [ -n "$dictionary" ]; then
-        cp $dictionary $OUT/$exeName.dict
+        cp $dictionary $OUT/$targetName.dict
     fi
     cd ..
     rm -r build_fuzzer
 }
 
-build_fuzzer "qtbase" "corelib/serialization/qxmlstream/qxmlstreamreader/readnext/readnext.pro" "xml" "/usr/share/afl/testcases/_extras/xml.dict"
-# build_fuzzer "qtbase" "gui/text/qtextdocument/setHtml/setHtml.pro" "html" "/usr/share/afl/testcases/_extras/html_tags.dict"
-build_fuzzer "qtbase" "gui/text/qtextdocument/setMarkdown/setMarkdown.pro" "markdown"
-build_fuzzer "qtbase" "gui/text/qtextlayout/beginLayout/beginLayout.pro"
+build_fuzzer "old" "qtbase" "corelib/serialization/qxmlstream/qxmlstreamreader/readnext/readnext.pro" "xml" "/usr/share/afl/testcases/_extras/xml.dict"
+# build_fuzzer "new" "qtbase" "gui/text/qtextdocument/sethtml/sethtml.pro" "html" "/usr/share/afl/testcases/_extras/html_tags.dict"
+build_fuzzer "old" "qtbase" "gui/text/qtextdocument/setmarkdown/setmarkdown.pro" "markdown"
+build_fuzzer "old" "qtbase" "gui/text/qtextlayout/beginlayout/beginlayout.pro"
