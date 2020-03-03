@@ -11,19 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Test the functionality of the utils module's functions:
-1. is_fuzz_target_local
-2. get_fuzz_targets
-3. get_env_var
-"""
+"""Test the functionality of the utils module's functions"""
 
 import os
+import tempfile
 import unittest
 
 import utils
 import helper
 
 EXAMPLE_PROJECT = 'example'
+
+TEST_OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            'cifuzz', 'test_files', 'out')
 
 
 class IsFuzzTargetLocalUnitTest(unittest.TestCase):
@@ -40,22 +40,11 @@ class IsFuzzTargetLocalUnitTest(unittest.TestCase):
 
   def test_valid_filepath(self):
     """Checks is_fuzz_target_local function with a valid filepath."""
-    utils.chdir_to_root()
-    helper.build_fuzzers_impl(EXAMPLE_PROJECT,
-                              True,
-                              'libfuzzer',
-                              'address',
-                              'x86_64', [],
-                              None,
-                              no_cache=False,
-                              mount_location=None)
+
     is_local = utils.is_fuzz_target_local(
-        os.path.join(helper.OSSFUZZ_DIR, 'build', 'out', EXAMPLE_PROJECT,
-                     'do_stuff_fuzzer'))
+        os.path.join(TEST_OUT_DIR, 'do_stuff_fuzzer'))
     self.assertTrue(is_local)
-    is_local = utils.is_fuzz_target_local(
-        os.path.join(helper.OSSFUZZ_DIR, 'build', 'out', EXAMPLE_PROJECT,
-                     'do_stuff_fuzzer.dict'))
+    is_local = utils.is_fuzz_target_local(TEST_OUT_DIR)
     self.assertFalse(is_local)
 
 
@@ -64,38 +53,57 @@ class GetFuzzTargetsUnitTest(unittest.TestCase):
 
   def test_valid_filepath(self):
     """Tests that fuzz targets can be retrieved once the fuzzers are built."""
-    utils.chdir_to_root()
-    helper.build_fuzzers_impl(EXAMPLE_PROJECT,
-                              True,
-                              'libfuzzer',
-                              'address',
-                              'x86_64', [],
-                              None,
-                              no_cache=False,
-                              mount_location=None)
-    fuzz_targets = utils.get_fuzz_targets(
-        os.path.join(helper.OSSFUZZ_DIR, 'build', 'out', EXAMPLE_PROJECT))
-    self.assertCountEqual(fuzz_targets, [
-        os.path.join(helper.OSSFUZZ_DIR, 'build', 'out', EXAMPLE_PROJECT,
-                     'do_stuff_fuzzer')
-    ])
+    fuzz_targets = utils.get_fuzz_targets(TEST_OUT_DIR)
+    self.assertCountEqual(fuzz_targets,
+                          [os.path.join(TEST_OUT_DIR, 'do_stuff_fuzzer')])
     fuzz_targets = utils.get_fuzz_targets(
         os.path.join(helper.OSSFUZZ_DIR, 'infra'))
     self.assertFalse(fuzz_targets)
 
   def test_invalid_filepath(self):
     """Tests what get_fuzz_targets return when invalid filepath is used."""
-    utils.chdir_to_root()
-    helper.build_fuzzers_impl(EXAMPLE_PROJECT,
-                              True,
-                              'libfuzzer',
-                              'address',
-                              'x86_64', [],
-                              None,
-                              no_cache=False,
-                              mount_location=None)
     fuzz_targets = utils.get_fuzz_targets('not/a/valid/file/path')
     self.assertFalse(fuzz_targets)
+
+
+class ExecuteUnitTest(unittest.TestCase):
+  """Test execute function in the utils module."""
+
+  def test_valid_command(self):
+    """Tests that execute can produce valid output."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+      out, err, err_code = utils.execute(['ls', '.'],
+                                         location=tmp_dir,
+                                         check_result=False)
+      self.assertEqual(err_code, 0)
+      self.assertEqual(err, '')
+      self.assertEqual(out, '')
+      out, err, err_code = utils.execute(['mkdir', 'tmp'],
+                                         location=tmp_dir,
+                                         check_result=False)
+      self.assertEqual(err_code, 0)
+      self.assertEqual(err, '')
+      self.assertEqual(out, '')
+      out, err, err_code = utils.execute(['ls', '.'],
+                                         location=tmp_dir,
+                                         check_result=False)
+      self.assertEqual(err_code, 0)
+      self.assertEqual(err, '')
+      self.assertEqual(out, 'tmp\n')
+
+  def test_error_command(self):
+    """Tests that execute can correctly surface errors."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+      out, err, err_code = utils.execute(['ls', 'notarealdir'],
+                                         location=tmp_dir,
+                                         check_result=False)
+      self.assertEqual(err_code, 2)
+      self.assertIsNotNone(err)
+      self.assertEqual(out, '')
+      with self.assertRaises(RuntimeError):
+        out, err, err_code = utils.execute(['ls', 'notarealdir'],
+                                           location=tmp_dir,
+                                           check_result=True)
 
 
 if __name__ == '__main__':
