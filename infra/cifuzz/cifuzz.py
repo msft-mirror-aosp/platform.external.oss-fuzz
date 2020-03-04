@@ -26,11 +26,46 @@ import sys
 import fuzz_target
 
 # pylint: disable=wrong-import-position
+# pylint: disable=import-error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import build_specified_commit
 import helper
 import repo_manager
 import utils
+
+# From clusterfuzz: src/python/crash_analysis/crash_analyzer.py
+# Used to get the beginning of the stack trace.
+STACKTRACE_TOOL_MARKERS = [
+    'AddressSanitizer',
+    'ASAN:',
+    'CFI: Most likely a control flow integrity violation;',
+    'ERROR: libFuzzer',
+    'KASAN:',
+    'LeakSanitizer',
+    'MemorySanitizer',
+    'ThreadSanitizer',
+    'UndefinedBehaviorSanitizer',
+    'UndefinedSanitizer',
+]
+
+# From clusterfuzz: src/python/crash_analysis/crash_analyzer.py
+# Used to get the end of the stack trace.
+STACKTRACE_END_MARKERS = [
+    'ABORTING',
+    'END MEMORY TOOL REPORT',
+    'End of process memory map.',
+    'END_KASAN_OUTPUT',
+    'SUMMARY:',
+    'Shadow byte and word',
+    '[end of stack trace]',
+    '\nExiting',
+    'minidump has been written',
+]
+
+#  Default fuzz configuration.
+DEFAULT_ENGINE = 'libfuzzer'
+DEFAULT_SANITIZER = 'address'
+DEFAULT_ARCHITECTURE = 'x86_64'
 
 # TODO: Turn default logging to WARNING when CIFuzz is stable
 logging.basicConfig(
@@ -94,8 +129,9 @@ def build_fuzzers(project_name,
 
   # Build Fuzzers using docker run.
   command = [
-      '--cap-add', 'SYS_PTRACE', '-e', 'FUZZING_ENGINE=libfuzzer', '-e',
-      'SANITIZER=address', '-e', 'ARCHITECTURE=x86_64'
+      '--cap-add', 'SYS_PTRACE', '-e', 'FUZZING_ENGINE=' + DEFAULT_ENGINE, '-e',
+      'SANITIZER=' + DEFAULT_SANITIZER, '-e',
+      'ARCHITECTURE=' + DEFAULT_ARCHITECTURE
   ]
   container = utils.get_container_name()
   if container:
@@ -124,14 +160,14 @@ def build_fuzzers(project_name,
   return True
 
 
-def run_fuzzers(project_name, fuzz_seconds, workspace):
+def run_fuzzers(fuzz_seconds, workspace, project_name):
   """Runs all fuzzers for a specific OSS-Fuzz project.
 
   Args:
-    project_name: The name of the OSS-Fuzz project being built.
     fuzz_seconds: The total time allotted for fuzzing.
     workspace: The location in a shared volume to store a git repo and build
       artifacts.
+    project_name: The name of the relevant OSS-Fuzz project.
 
   Returns:
     (True if run was successful, True if bug was found).
@@ -141,6 +177,8 @@ def run_fuzzers(project_name, fuzz_seconds, workspace):
     logging.error('Invalid workspace: %s.', workspace)
     return False, False
   out_dir = os.path.join(workspace, 'out')
+  artifacts_dir = os.path.join(out_dir, 'artifacts')
+  os.makedirs(artifacts_dir, exist_ok=True)
   if not fuzz_seconds or fuzz_seconds < 1:
     logging.error('Fuzz_seconds argument must be greater than 1, but was: %s.',
                   format(fuzz_seconds))
@@ -156,14 +194,84 @@ def run_fuzzers(project_name, fuzz_seconds, workspace):
 
   # Run fuzzers for alotted time.
   for fuzzer_path in fuzzer_paths:
-    target = fuzz_target.FuzzTarget(project_name, fuzzer_path,
-                                    fuzz_seconds_per_target, out_dir)
+    target = fuzz_target.FuzzTarget(fuzzer_path, fuzz_seconds_per_target,
+                                    out_dir, project_name)
+
     test_case, stack_trace = target.fuzz()
     if not test_case or not stack_trace:
       logging.info('Fuzzer %s, finished running.', target.target_name)
     else:
       logging.info('Fuzzer %s, detected error: %s.', target.target_name,
                    stack_trace)
-      shutil.move(test_case, os.path.join(out_dir, 'testcase'))
+      shutil.move(test_case, os.path.join(artifacts_dir, 'test_case'))
+      parse_fuzzer_output(stack_trace, artifacts_dir)
       return True, True
   return True, False
+
+
+def check_fuzzer_build(out_dir):
+  """Checks the integrity of the built fuzzers.
+
+  Args:
+    out_dir: The directory containing the fuzzer binaries.
+
+  Returns:
+    True if fuzzers are correct.
+  """
+  if not os.path.exists(out_dir):
+    logging.error('Invalid out directory: %s.', out_dir)
+    return False
+  if not os.listdir(out_dir):
+    logging.error('No fuzzers found in out directory: %s.', out_dir)
+    return False
+
+  command = [
+      '--cap-add', 'SYS_PTRACE', '-e', 'FUZZING_ENGINE=' + DEFAULT_ENGINE, '-e',
+      'SANITIZER=' + DEFAULT_SANITIZER, '-e',
+      'ARCHITECTURE=' + DEFAULT_ARCHITECTURE
+  ]
+  container = utils.get_container_name()
+  if container:
+    command += ['-e', 'OUT=' + out_dir, '--volumes-from', container]
+  else:
+    command += ['-v', '%s:/out' % out_dir]
+  command.extend(['-t', 'gcr.io/oss-fuzz-base/base-runner', 'test_all'])
+  exit_code = helper.docker_run(command)
+  if exit_code:
+    logging.error('Check fuzzer build failed.')
+    return False
+  return True
+
+
+def parse_fuzzer_output(fuzzer_output, out_dir):
+  """Parses the fuzzer output from a fuzz target binary.
+
+  Args:
+    fuzzer_output: A fuzz target binary output string to be parsed.
+    out_dir: The location to store the parsed output files.
+  """
+  # Get index of key file points.
+  for marker in STACKTRACE_TOOL_MARKERS:
+    marker_index = fuzzer_output.find(marker)
+    if marker_index:
+      begin_summary = marker_index
+      break
+
+  end_summary = -1
+  for marker in STACKTRACE_END_MARKERS:
+    marker_index = fuzzer_output.find(marker)
+    if marker_index:
+      end_summary = marker_index + len(marker)
+      break
+
+  if begin_summary is None or end_summary is None:
+    return
+
+  summary_str = fuzzer_output[begin_summary:end_summary]
+  if not summary_str:
+    return
+
+  # Write sections of fuzzer output to specific files.
+  summary_file_path = os.path.join(out_dir, 'bug_summary.txt')
+  with open(summary_file_path, 'a') as summary_handle:
+    summary_handle.write(summary_str)
