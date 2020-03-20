@@ -15,7 +15,6 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-clang
-MAINTAINER mike.aizatsky@gmail.com
 RUN apt-get install -y git \
     subversion \
     jq \
@@ -48,7 +47,7 @@ RUN go get github.com/dvyukov/go-fuzz/go-fuzz-build
 ENV SANITIZER_FLAGS_address "-fsanitize=address -fsanitize-address-use-after-scope"
 
 # Set of '-fsanitize' flags matches '-fno-sanitize-recover' + 'unsigned-integer-overflow'.
-ENV SANITIZER_FLAGS_undefined "-fsanitize=array-bounds,bool,builtin,float-divide-by-zero,function,integer-divide-by-zero,null,return,returns-nonnull-attribute,shift,signed-integer-overflow,unsigned-integer-overflow,unreachable,vla-bound,vptr -fno-sanitize-recover=array-bounds,bool,builtin,float-divide-by-zero,function,integer-divide-by-zero,null,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound,vptr"
+ENV SANITIZER_FLAGS_undefined "-fsanitize=array-bounds,bool,builtin,enum,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unsigned-integer-overflow,unreachable,vla-bound,vptr -fno-sanitize-recover=array-bounds,bool,builtin,enum,float-divide-by-zero,function,integer-divide-by-zero,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound,vptr"
 
 ENV SANITIZER_FLAGS_memory "-fsanitize=memory -fsanitize-memory-track-origins"
 
@@ -69,7 +68,7 @@ ENV COVERAGE_FLAGS="-fsanitize=fuzzer-no-link"
 ENV COVERAGE_FLAGS_coverage "-fprofile-instr-generate -fcoverage-mapping -pthread -Wl,--no-as-needed -Wl,-ldl -Wl,-lm -Wno-unused-command-line-argument"
 
 # Coverage isntrumentation flags for dataflow builds.
-ENV COVERAGE_FLAGS_dataflow="-fsanitize-coverage=trace-pc-guard,pc-table,func,trace-cmp"
+ENV COVERAGE_FLAGS_dataflow="-fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp"
 
 # Default sanitizer, fuzzing engine and architecture to use.
 ENV SANITIZER="address"
@@ -104,6 +103,8 @@ RUN mkdir honggfuzz && \
 
 COPY compile compile_afl compile_dataflow compile_libfuzzer compile_honggfuzz \
     precompile_honggfuzz srcmap write_labels.py /usr/local/bin/
+
+COPY detect_repo.py /opt/cifuzz/
 
 RUN precompile_honggfuzz
 
