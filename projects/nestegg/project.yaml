@@ -1,4 +1,5 @@
 homepage: "https://github.com/kinetiknz/nestegg"
+language: c++
 primary_contact: "mgregan@mozilla.com"
 fuzzing_engines:
   - afl
@@ -12,4 +13,3 @@ sanitizers:
   - dataflow
 vendor_ccs:
   - "twsmith@mozilla.com"
-  - "cdiehl@mozilla.com"

@@ -30,8 +30,8 @@ import subprocess
 import sys
 import templates
 
-OSSFUZZ_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-BUILD_DIR = os.path.join(OSSFUZZ_DIR, 'build')
+OSS_FUZZ_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+BUILD_DIR = os.path.join(OSS_FUZZ_DIR, 'build')
 
 BASE_IMAGES = [
     'gcr.io/oss-fuzz-base/base-image',
@@ -59,7 +59,7 @@ CORPUS_BACKUP_URL_FORMAT = (
 
 def main():  # pylint: disable=too-many-branches,too-many-return-statements,too-many-statements
   """Get subcommand from program arguments and do it."""
-  os.chdir(OSSFUZZ_DIR)
+  os.chdir(OSS_FUZZ_DIR)
   if not os.path.exists(BUILD_DIR):
     os.mkdir(BUILD_DIR)
 
@@ -171,6 +171,9 @@ def main():  # pylint: disable=too-many-branches,too-many-return-statements,too-
   shell_parser = subparsers.add_parser(
       'shell', help='Run /bin/bash within the builder container.')
   shell_parser.add_argument('project_name', help='name of the project')
+  shell_parser.add_argument('source_path',
+                            help='path of local source',
+                            nargs='?')
   _add_architecture_args(shell_parser)
   _add_engine_args(shell_parser)
   _add_sanitizer_args(shell_parser)
@@ -257,7 +260,7 @@ def _get_command_string(command):
 
 def _get_project_dir(project_name):
   """Returns path to the project."""
-  return os.path.join(OSSFUZZ_DIR, 'projects', project_name)
+  return os.path.join(OSS_FUZZ_DIR, 'projects', project_name)
 
 
 def get_dockerfile_path(project_name):
@@ -867,12 +870,19 @@ def shell(args):
     image_project = 'oss-fuzz'
     out_dir = _get_output_dir(args.project_name)
 
-  run_args = _env_to_docker_args(env) + [
+  run_args = _env_to_docker_args(env)
+  if args.source_path:
+    run_args.extend([
+        '-v',
+        '%s:%s' % (_get_absolute_path(args.source_path), '/src'),
+    ])
+
+  run_args.extend([
       '-v',
       '%s:/out' % out_dir, '-v',
       '%s:/work' % _get_work_dir(args.project_name), '-t',
       'gcr.io/%s/%s' % (image_project, args.project_name), '/bin/bash'
-  ]
+  ])
 
   docker_run(run_args)
   return 0
