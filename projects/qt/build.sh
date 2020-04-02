@@ -26,13 +26,15 @@ sed -i -e "s/QMAKE_CFLAGS_OPTIMIZE_FULL = -O3/QMAKE_CFLAGS_OPTIMIZE_FULL = -O1/g
 
 # build project
 cd $WORK
-MAKEFLAGS=-j$(nproc) $SRC/qt/configure -platform linux-clang-libc++ -static -opensource -confirm-license -no-opengl -nomake tests -nomake examples -prefix $PWD/qtbase
+MAKEFLAGS=-j$(nproc) $SRC/qt/configure -qt-libmd4c -platform linux-clang-libc++ -static -opensource -confirm-license -no-opengl -nomake tests -nomake examples -prefix $PWD/qtbase -D QT_NO_DEPRECATED_WARNINGS
 make -j$(nproc)
 
 # prepare corpus files
 zip -j $WORK/html $SRC/qtqa/fuzzing/testcases/html/*
 zip -j $WORK/markdown $SRC/qtqa/fuzzing/testcases/markdown/*
-zip -j $WORK/xml $SRC/qtqa/fuzzing/testcases/xml/* /usr/share/afl/testcases/others/xml/*
+zip -j $WORK/ssl.pem.zip $SRC/qtqa/fuzzing/testcases/ssl.pem/*
+zip -j $WORK/text $SRC/qtqa/fuzzing/testcases/text/* $SRC/AFL/testcases/others/text/*
+zip -j $WORK/xml $SRC/qtqa/fuzzing/testcases/xml/* $SRC/AFL/testcases/others/xml/*
 
 # build fuzzers
 
@@ -55,8 +57,6 @@ build_fuzzer() {
     local lowercaseExeName=$exeName
     if [ "$exeName" == "setmarkdown" ]; then
         exeName=setMarkdown
-    elif [ "$exeName" == "beginlayout" ]; then
-        exeName=beginLayout
     fi
     if [ "$lowercaseExeName" != "$exeName" ]; then
         mv $lowercaseExeName $exeName
@@ -76,7 +76,9 @@ build_fuzzer() {
     rm -r build_fuzzer
 }
 
-build_fuzzer "old" "qtbase" "corelib/serialization/qxmlstream/qxmlstreamreader/readnext/readnext.pro" "xml" "/usr/share/afl/testcases/_extras/xml.dict"
-# build_fuzzer "new" "qtbase" "gui/text/qtextdocument/sethtml/sethtml.pro" "html" "/usr/share/afl/testcases/_extras/html_tags.dict"
+build_fuzzer "new" "qtbase" "corelib/serialization/qcborvalue/fromcbor/fromcbor.pro"
+build_fuzzer "old" "qtbase" "corelib/serialization/qxmlstream/qxmlstreamreader/readnext/readnext.pro" "xml" "$SRC/AFL/dictionaries/xml.dict"
+# build_fuzzer "new" "qtbase" "gui/text/qtextdocument/sethtml/sethtml.pro" "html" "$SRC/AFL/dictionaries/html_tags.dict"
 build_fuzzer "old" "qtbase" "gui/text/qtextdocument/setmarkdown/setmarkdown.pro" "markdown"
-build_fuzzer "old" "qtbase" "gui/text/qtextlayout/beginlayout/beginlayout.pro"
+build_fuzzer "new" "qtbase" "gui/text/qtextlayout/beginlayout/beginlayout.pro" "text"
+build_fuzzer "new" "qtbase" "network/ssl/qsslcertificate/qsslcertificate/pem/pem.pro" "ssl.pem"
