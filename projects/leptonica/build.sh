@@ -106,7 +106,8 @@ make -j$(nproc)
 make install
 
 $CXX $CXXFLAGS -std=c++11 -I"$WORK/include" \
-  "$SRC/pix_rotate_shear_fuzzer.cc" -o "$OUT/pix_rotate_shear_fuzzer" \
+  "$SRC/leptonica/prog/fuzzing/pix_rotate_shear_fuzzer.cc"\
+  -o "$OUT/pix_rotate_shear_fuzzer" \
   "$WORK/lib/liblept.a" \
   "$WORK/lib/libtiff.a" \
   "$WORK/lib/libwebp.a" \
@@ -117,3 +118,36 @@ $CXX $CXXFLAGS -std=c++11 -I"$WORK/include" \
   "$WORK/lib/libz.a" \
   $LIB_FUZZING_ENGINE
 
+$CXX $CXXFLAGS -std=c++11 -I"$WORK/include" \
+  "$SRC/leptonica/prog/fuzzing/pixa_recog_fuzzer.cc"\
+  -o "$OUT/pixa_recog_fuzzer" \
+  -Isrc/ \
+  "$WORK/lib/liblept.a" \
+  "$WORK/lib/libtiff.a" \
+  "$WORK/lib/libwebp.a" \
+  "$WORK/lib/libpng.a" \
+  "$WORK/lib/libjpeg.a" \
+  "$WORK/lib/libjbig.a" \
+  "$WORK/lib/libzstd.a" \
+  "$WORK/lib/libz.a" \
+  $LIB_FUZZING_ENGINE
+
+$CXX $CXXFLAGS -std=c++11 -I"$WORK/include" \
+  "$SRC/leptonica/prog/fuzzing/enhance_fuzzer.cc"\
+  -o "$OUT/enhance_fuzzer" \
+  -Isrc/ \
+  "$WORK/lib/liblept.a" \
+  "$WORK/lib/libtiff.a" \
+  "$WORK/lib/libwebp.a" \
+  "$WORK/lib/libpng.a" \
+  "$WORK/lib/libjpeg.a" \
+  "$WORK/lib/libjbig.a" \
+  "$WORK/lib/libzstd.a" \
+  "$WORK/lib/libz.a" \
+  $LIB_FUZZING_ENGINE
+
+
+cp $SRC/leptonica/prog/fuzzing/general_corpus.zip $OUT/pix_rotate_shear_fuzzer_seed_corpus.zip
+cp $SRC/leptonica/prog/fuzzing/general_corpus.zip $OUT/enhance_fuzzer_seed_corpus.zip
+
+cp $SRC/leptonica/prog/fuzzing/pixa_recog_fuzzer_seed_corpus.zip $OUT/
