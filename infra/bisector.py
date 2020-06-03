@@ -37,6 +37,7 @@ from distutils import spawn
 import json
 import logging
 import os
+import sys
 import tempfile
 
 import build_specified_commit
@@ -45,6 +46,25 @@ import repo_manager
 import utils
 
 Result = collections.namedtuple('Result', ['repo_url', 'commit'])
+
+START_MARKERS = [
+    '==ERROR',
+    '==WARNING',
+]
+
+END_MARKERS = [
+    'SUMMARY:',
+]
+
+DEDUP_TOKEN_MARKER = 'DEDUP_TOKEN:'
+
+
+class BisectError(Exception):
+  """Bisection error."""
+
+  def __init__(self, message, repo_url):
+    super().__init__(message)
+    self.repo_url = repo_url
 
 
 def main():
@@ -74,6 +94,10 @@ def main():
   parser.add_argument('--sanitizer',
                       default='address',
                       help='The default is "address".')
+  parser.add_argument('--type',
+                      choices=['regressed', 'fixed'],
+                      help='The bisection type.',
+                      required=True)
   parser.add_argument('--architecture', default='x86_64')
   args = parser.parse_args()
 
@@ -82,8 +106,8 @@ def main():
                                                 sanitizer=args.sanitizer,
                                                 architecture=args.architecture)
 
-  result = bisect(args.old_commit, args.new_commit, args.test_case_path,
-                  args.fuzz_target, build_data)
+  result = bisect(args.type, args.old_commit, args.new_commit,
+                  args.test_case_path, args.fuzz_target, build_data)
   if not result.commit:
     logging.error('No error was found in commit range %s:%s', args.old_commit,
                   args.new_commit)
@@ -125,8 +149,57 @@ def _load_base_builder_repo():
   return repo
 
 
-def _bisect(old_commit, new_commit, test_case_path, fuzz_target, build_data):  # pylint: disable=too-many-locals
+def _get_dedup_token(output):
+  """Get dedup token."""
+  for line in output.splitlines():
+    token_location = line.find(DEDUP_TOKEN_MARKER)
+    if token_location == -1:
+      continue
+
+    return line[token_location + len(DEDUP_TOKEN_MARKER):].strip()
+
+  return None
+
+
+def _check_for_crash(project_name, fuzz_target, test_case_path):
+  """Check for crash."""
+
+  def docker_run(args):
+    command = ['docker', 'run', '--rm', '--privileged']
+    if sys.stdin.isatty():
+      command.append('-i')
+
+    return utils.execute(command + args)
+
+  logging.info('Checking for crash')
+  out, err, return_code = helper.reproduce_impl(project_name,
+                                                fuzz_target,
+                                                False, [], [],
+                                                test_case_path,
+                                                runner=docker_run,
+                                                err_result=(None, None, None))
+  if return_code is None:
+    return None
+
+  logging.info('stdout =\n%s', out)
+  logging.info('stderr =\n%s', err)
+
+  # pylint: disable=unsupported-membership-test
+  has_start_marker = any(
+      marker in out or marker in err for marker in START_MARKERS)
+  has_end_marker = any(marker in out or marker in err for marker in END_MARKERS)
+  if not has_start_marker or not has_end_marker:
+    return None
+
+  return _get_dedup_token(out + err)
+
+
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-arguments
+def _bisect(bisect_type, old_commit, new_commit, test_case_path, fuzz_target,
+            build_data):
   """Perform the bisect."""
+  # pylint: disable=too-many-branches
   base_builder_repo = _load_base_builder_repo()
 
   with tempfile.TemporaryDirectory() as tmp_dir:
@@ -153,11 +226,22 @@ def _bisect(old_commit, new_commit, test_case_path, fuzz_target, build_data):  #
         host_src_dir,
         build_data,
         base_builder_repo=base_builder_repo):
-      raise RuntimeError('Failed to build new_commit')
+      raise BisectError('Failed to build new_commit', repo_url)
 
-    expected_error_code = helper.reproduce_impl(build_data.project_name,
-                                                fuzz_target, False, [], [],
-                                                test_case_path)
+    if bisect_type == 'fixed':
+      should_crash = False
+    elif bisect_type == 'regressed':
+      should_crash = True
+    else:
+      raise BisectError('Invalid bisect type ' + bisect_type, repo_url)
+
+    expected_error = _check_for_crash(build_data.project_name, fuzz_target,
+                                      test_case_path)
+    logging.info('new_commit result = %s', expected_error)
+
+    if not should_crash and expected_error:
+      logging.warning('new_commit crashed but not shouldn\'t. '
+                      'Continuing to see if stack changes.')
 
     # Check if the error is persistent through the commit range
     if old_commit:
@@ -168,12 +252,11 @@ def _bisect(old_commit, new_commit, test_case_path, fuzz_target, build_data):  #
           host_src_dir,
           build_data,
           base_builder_repo=base_builder_repo):
-        raise RuntimeError('Failed to build old_commit')
+        raise BisectError('Failed to build old_commit', repo_url)
 
-      if expected_error_code == helper.reproduce_impl(build_data.project_name,
-                                                      fuzz_target, False, [],
-                                                      [], test_case_path):
-        raise RuntimeError('old_commit had same result as new_commit')
+      if _check_for_crash(build_data.project_name, fuzz_target,
+                          test_case_path) == expected_error:
+        raise BisectError('old_commit had same result as new_commit', repo_url)
 
     while old_idx - new_idx > 1:
       curr_idx = (old_idx + new_idx) // 2
@@ -190,20 +273,25 @@ def _bisect(old_commit, new_commit, test_case_path, fuzz_target, build_data):  #
         old_idx = curr_idx
         continue
 
-      error_code = helper.reproduce_impl(build_data.project_name, fuzz_target,
-                                         False, [], [], test_case_path)
-      if expected_error_code == error_code:
+      current_error = _check_for_crash(build_data.project_name, fuzz_target,
+                                       test_case_path)
+      logging.info('Current result = %s', current_error)
+      if expected_error == current_error:
         new_idx = curr_idx
       else:
         old_idx = curr_idx
     return Result(repo_url, commit_list[new_idx])
 
 
-def bisect(old_commit, new_commit, test_case_path, fuzz_target, build_data):  # pylint: disable=too-many-locals
+# pylint: disable=too-many-locals
+# pylint: disable=too-many-arguments
+def bisect(bisect_type, old_commit, new_commit, test_case_path, fuzz_target,
+           build_data):
   """From a commit range, this function caluclates which introduced a
   specific error from a fuzz test_case_path.
 
   Args:
+    bisect_type: The type of the bisect ('regressed' or 'fixed').
     old_commit: The oldest commit in the error regression range.
     new_commit: The newest commit in the error regression range.
     test_case_path: The file path of the test case that triggers the error
@@ -216,16 +304,15 @@ def bisect(old_commit, new_commit, test_case_path, fuzz_target, build_data):  # 
   Raises:
     ValueError: when a repo url can't be determine from the project.
   """
-  result = _bisect(old_commit, new_commit, test_case_path, fuzz_target,
-                   build_data)
-
-  # Clean up projects/ as _bisect may have modified it.
-  oss_fuzz_repo_manager = repo_manager.BaseRepoManager(helper.OSS_FUZZ_DIR)
-  oss_fuzz_repo_manager.git(['reset', 'projects'])
-  oss_fuzz_repo_manager.git(['checkout', 'projects'])
-  oss_fuzz_repo_manager.git(['clean', '-fxd', 'projects'])
-
-  return result
+  try:
+    return _bisect(bisect_type, old_commit, new_commit, test_case_path,
+                   fuzz_target, build_data)
+  finally:
+    # Clean up projects/ as _bisect may have modified it.
+    oss_fuzz_repo_manager = repo_manager.BaseRepoManager(helper.OSS_FUZZ_DIR)
+    oss_fuzz_repo_manager.git(['reset', 'projects'])
+    oss_fuzz_repo_manager.git(['checkout', 'projects'])
+    oss_fuzz_repo_manager.git(['clean', '-fxd', 'projects'])
 
 
 if __name__ == '__main__':
