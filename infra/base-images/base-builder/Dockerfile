@@ -16,7 +16,8 @@
 
 FROM gcr.io/oss-fuzz-base/base-clang
 
-RUN apt-get update && \
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
     apt-get install -y software-properties-common && \
     add-apt-repository ppa:git-core/ppa && \
     apt-get update && \
