@@ -18,8 +18,7 @@
 export CFLAGS="$CFLAGS"
 export CXXFLAGS="$CXXFLAGS"
 
-declare -r FUZZER_TARGETS_CC=$(find . -name *_fuzz_test.cc)
-declare -r FUZZER_TARGETS="$(for t in ${FUZZER_TARGETS_CC}; do echo "${t:2:-3}"; done)"
+declare -r FUZZER_TARGETS=$(bazel query "attr('tags', 'fuzz_target', "...") except attr('tags', 'no_fuzz', '...')")
 
 FUZZER_DICTIONARIES="\
 "
@@ -57,25 +56,23 @@ fi
 
 declare BAZEL_BUILD_TARGETS=""
 declare BAZEL_CORPUS_TARGETS=""
-declare FILTERED_FUZZER_TARGETS=""
 for t in ${FUZZER_TARGETS}
 do
-  declare BAZEL_PATH="//"$(dirname "$t")":"$(basename "$t")
-  declare TAGGED=$(bazel query "attr('tags', 'no_fuzz', ${BAZEL_PATH})")
-  if [ -z "${TAGGED}" ]
-  then
-    FILTERED_FUZZER_TARGETS+="$t "
-    BAZEL_BUILD_TARGETS+="${BAZEL_PATH}_driverless "
-    BAZEL_CORPUS_TARGETS+="${BAZEL_PATH}_corpus_tar "
-  fi
+  BAZEL_BUILD_TARGETS+="${t}_driverless "
+  BAZEL_CORPUS_TARGETS+="${t}_corpus_tar "
 done
 
 # Build driverless libraries.
+# Benchmark about 2 GB per CPU (14 threads for 28.8 GB RAM)
+# TODO(asraa): Remove deprecation warnings when Envoy moves to C++17
 bazel build --verbose_failures --dynamic_mode=off --spawn_strategy=standalone \
+  --discard_analysis_cache --notrack_incremental_state --nokeep_state_after_build \
+  --local_cpu_resources=HOST_CPUS*0.45 \
   --genrule_strategy=standalone --strip=never \
   --copt=-fno-sanitize=vptr --linkopt=-fno-sanitize=vptr \
   --define tcmalloc=disabled --define signal_trace=disabled \
   --define ENVOY_CONFIG_ASAN=1 --copt -D__SANITIZE_ADDRESS__ \
+  --copt -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS \
   --define force_libcpp=enabled --build_tag_filters=-no_asan \
   --linkopt=-lc++ --linkopt=-pthread ${EXTRA_BAZEL_FLAGS} \
   ${BAZEL_BUILD_TARGETS[*]} ${BAZEL_CORPUS_TARGETS[*]}
@@ -91,6 +88,7 @@ then
   mkdir -p "${REMAP_PATH}"
   # For .cc, we only really care about source/ today.
   rsync -av "${SRC}"/envoy/source "${REMAP_PATH}"
+  rsync -av "${SRC}"/envoy/third_party "${REMAP_PATH}"
   rsync -av "${SRC}"/envoy/test "${REMAP_PATH}"
   # Remove filesystem loop manually.
   rm -rf "${SRC}"/envoy/bazel-envoy/external/envoy
@@ -108,10 +106,11 @@ then
 fi
 
 # Copy out test driverless binaries from bazel-bin/.
-for t in ${FILTERED_FUZZER_TARGETS}
+for t in ${FUZZER_TARGETS}
 do
-  TARGET_BASE="$(expr "$t" : '.*/\(.*\)_fuzz_test')"
-  TARGET_DRIVERLESS=bazel-bin/"${t}"_driverless
+  TARGET_PATH=${t/://}
+  TARGET_BASE="$(expr "$TARGET_PATH" : '.*/\(.*\)_fuzz_test')"
+  TARGET_DRIVERLESS=bazel-bin/"${TARGET_PATH:2}"_driverless
   echo "Copying fuzzer $t"
   cp "${TARGET_DRIVERLESS}" "${OUT}"/"${TARGET_BASE}"_fuzz_test
 done
@@ -120,13 +119,14 @@ done
 # TODO(htuch): just use the .tar directly when
 # https://github.com/google/oss-fuzz/issues/1918 is fixed.
 CORPUS_UNTAR_PATH="${PWD}"/_tmp_corpus
-for t in ${FILTERED_FUZZER_TARGETS}
+for t in ${FUZZER_TARGETS}
 do
   echo "Extracting and zipping fuzzer $t corpus"
+  TARGET_PATH=${t/://}
   rm -rf "${CORPUS_UNTAR_PATH}"
   mkdir -p "${CORPUS_UNTAR_PATH}"
-  tar -C "${CORPUS_UNTAR_PATH}" -xvf bazel-bin/"${t}"_corpus_tar.tar
-  TARGET_BASE="$(expr "$t" : '.*/\(.*\)_fuzz_test')"
+  tar -C "${CORPUS_UNTAR_PATH}" -xvf bazel-bin/"${TARGET_PATH:2}"_corpus_tar.tar
+  TARGET_BASE="$(expr "$TARGET_PATH" : '.*/\(.*\)_fuzz_test')"
   # There may be *.dict files in this folder that need to be moved into the OUT dir.
   find "${CORPUS_UNTAR_PATH}" -type f -name *.dict -exec mv -n {} "${OUT}"/ \;
   zip "${OUT}/${TARGET_BASE}"_fuzz_test_seed_corpus.zip \

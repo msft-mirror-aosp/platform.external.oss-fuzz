@@ -16,19 +16,34 @@
 #
 ################################################################################
 
-./autogen.sh
-./configure --with-http=no
-make -j$(nproc) clean
-make -j$(nproc) all
+if [ "$SANITIZER" = undefined ]; then
+    export CFLAGS="$CFLAGS -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=unsigned-integer-overflow"
+    export CXXFLAGS="$CXXFLAGS -fsanitize=unsigned-integer-overflow -fno-sanitize-recover=unsigned-integer-overflow"
+fi
 
-seed_corpus_temp_file="$OUT/xml_seed_corpus.zip"
-zip -r $seed_corpus_temp_file $SRC/libxml2/test
+./autogen.sh \
+    --disable-shared \
+    --without-debug \
+    --without-ftp \
+    --without-http \
+    --without-legacy \
+    --without-python
+make -j$(nproc) V=1
 
-for fuzzer in libxml2_xml_read_memory_fuzzer libxml2_xml_reader_for_file_fuzzer; do
-  $CXX $CXXFLAGS -std=c++11 -Iinclude/ \
-      $SRC/$fuzzer.cc -o $OUT/$fuzzer \
-      $LIB_FUZZING_ENGINE .libs/libxml2.a
+cd fuzz
+make V=1 fuzz.o
 
-  cp $SRC/*.dict $OUT/$fuzzer.dict
-  cp $seed_corpus_temp_file $OUT/${fuzzer}_seed_corpus.zip
+for fuzzer in html regexp schema uri xml; do
+    make V=1 $fuzzer.o
+    # Link with $CXX
+    $CXX $CXXFLAGS \
+        $fuzzer.o fuzz.o \
+        -o $OUT/$fuzzer \
+        $LIB_FUZZING_ENGINE \
+        ../.libs/libxml2.a -Wl,-Bstatic -lz -llzma -Wl,-Bdynamic
+
+    [ -e seed/$fuzzer ] || make V=1 seed/$fuzzer.stamp
+    zip -j $OUT/${fuzzer}_seed_corpus.zip seed/$fuzzer/*
 done
+
+cp *.dict *.options $OUT/
