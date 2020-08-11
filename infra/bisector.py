@@ -32,9 +32,6 @@ This is done with the following steps:
 
 import argparse
 import collections
-import datetime
-from distutils import spawn
-import json
 import logging
 import os
 import sys
@@ -81,7 +78,8 @@ def main():
                       help='The newest commit SHA to be bisected.',
                       required=True)
   parser.add_argument('--old_commit',
-                      help='The oldest commit SHA to be bisected.')
+                      help='The oldest commit SHA to be bisected.',
+                      required=True)
   parser.add_argument('--fuzz_target',
                       help='The name of the fuzzer to be built.',
                       required=True)
@@ -119,34 +117,6 @@ def main():
     return 1
   print('Error was introduced at commit %s' % result.commit)
   return 0
-
-
-def _load_base_builder_repo():
-  """Get base-image digests."""
-  gcloud_path = spawn.find_executable('gcloud')
-  if not gcloud_path:
-    logging.warning('gcloud not found in PATH.')
-    return None
-
-  result, _, _ = utils.execute([
-      gcloud_path,
-      'container',
-      'images',
-      'list-tags',
-      'gcr.io/oss-fuzz-base/base-builder',
-      '--format=json',
-      '--sort-by=timestamp',
-  ],
-                               check_result=True)
-  result = json.loads(result)
-
-  repo = build_specified_commit.BaseBuilderRepo()
-  for image in result:
-    timestamp = datetime.datetime.fromisoformat(
-        image['timestamp']['datetime']).astimezone(datetime.timezone.utc)
-    repo.add_digest(timestamp, image['digest'])
-
-  return repo
 
 
 def _get_dedup_token(output):
@@ -196,11 +166,12 @@ def _check_for_crash(project_name, fuzz_target, test_case_path):
 
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-arguments
+# pylint: disable=too-many-statements
 def _bisect(bisect_type, old_commit, new_commit, test_case_path, fuzz_target,
             build_data):
   """Perform the bisect."""
   # pylint: disable=too-many-branches
-  base_builder_repo = _load_base_builder_repo()
+  base_builder_repo = build_specified_commit.load_base_builder_repo()
 
   with tempfile.TemporaryDirectory() as tmp_dir:
     repo_url, repo_path = build_specified_commit.detect_main_repo(
@@ -243,8 +214,8 @@ def _bisect(bisect_type, old_commit, new_commit, test_case_path, fuzz_target,
       logging.warning('new_commit crashed but not shouldn\'t. '
                       'Continuing to see if stack changes.')
 
-    # Check if the error is persistent through the commit range
-    if old_commit:
+    range_valid = False
+    for _ in range(2):
       logging.info('Testing against old_commit (%s)', commit_list[old_idx])
       if not build_specified_commit.build_fuzzers_from_commit(
           commit_list[old_idx],
@@ -256,7 +227,23 @@ def _bisect(bisect_type, old_commit, new_commit, test_case_path, fuzz_target,
 
       if _check_for_crash(build_data.project_name, fuzz_target,
                           test_case_path) == expected_error:
-        raise BisectError('old_commit had same result as new_commit', repo_url)
+        logging.warning('old_commit %s had same result as new_commit %s',
+                        old_commit, new_commit)
+        # Try again on an slightly older commit.
+        old_commit = bisect_repo_manager.get_parent(old_commit, 64)
+        if not old_commit:
+          break
+
+        commit_list = bisect_repo_manager.get_commit_list(
+            new_commit, old_commit)
+        old_idx = len(commit_list) - 1
+        continue
+
+      range_valid = True
+      break
+
+    if not range_valid:
+      raise BisectError('old_commit had same result as new_commit', repo_url)
 
     while old_idx - new_idx > 1:
       curr_idx = (old_idx + new_idx) // 2

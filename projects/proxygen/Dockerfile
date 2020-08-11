@@ -15,7 +15,6 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
-MAINTAINER mhl@fb.com
 
 # Install packages we need to build dependencies
 RUN apt-get update && \
@@ -30,20 +29,6 @@ RUN apt-get update && \
     g++ \
     python \
     python-dev
-
-# We need a newer version of CMake than is available in the base builder image
-RUN wget https://github.com/Kitware/CMake/releases/download/v3.15.2/cmake-3.15.2.tar.gz && \
-    tar xzf cmake-3.15.2.tar.gz && \
-    cd cmake-3.15.2 && \
-    export CC=clang && \
-    export CXX=clang++ && \
-    CXXFLAGS="" && \
-    CFLAGS="" && \
-    ./bootstrap && \
-    make -j$(nproc) && \
-    make install && \
-    cd .. && \
-    rm -rf cmake-3.15.2
 
 # Install and build boost from source so we can have it use libc++
 RUN wget https://sourceforge.net/projects/boost/files/boost/1.70.0/boost_1_70_0.tar.gz && \
