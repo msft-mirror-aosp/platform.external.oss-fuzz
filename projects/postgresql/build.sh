@@ -14,12 +14,26 @@
 # limitations under the License.
 #
 ################################################################################
-git apply ../add_fuzzers.diff
 cp -r $SRC/fuzzer src/backend/
-mkdir bld
+
+useradd fuzzuser
+chown -R fuzzuser .
 cd bld
 
-../configure --prefix /usr/local/
-make -j$(nproc)
+CC="" CXX="" CFLAGS="" CXXFLAGS="" su fuzzuser -c ../configure
+cd src/backend/fuzzer
+su fuzzuser -c "make createdb"
+chown -R root .
+mv temp/data .
+tar -czvf data.tar.gz data/
+cp data.tar.gz $OUT/
+cd ../../..
+cp -r tmp_install $OUT/
+make clean
 
-cp src/backend/fuzzer/*_fuzzer $OUT/
+../configure
+make
+cd src/backend/fuzzer
+make fuzzer
+cp *_fuzzer $OUT/
+cp $SRC/postgresql_fuzzer_seed_corpus.zip $OUT/
