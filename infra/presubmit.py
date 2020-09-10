@@ -75,13 +75,14 @@ class ProjectYamlChecker:
   SECTIONS_AND_CONSTANTS = {
       'sanitizers': {'address', 'none', 'memory', 'undefined', 'dataflow'},
       'architectures': {'i386', 'x86_64'},
-      'fuzzing_engines': {'afl', 'libfuzzer', 'honggfuzz', 'dataflow'},
+      'fuzzing_engines': {'afl', 'libfuzzer', 'honggfuzz', 'dataflow', 'none'},
   }
 
   # Note: this list must be updated when we allow new sections.
   VALID_SECTION_NAMES = [
       'architectures',
       'auto_ccs',
+      'blackbox',
       'builds_per_day',
       'coverage_extra_args',
       'disabled',
