@@ -1,2 +1,9 @@
 homepage: "https://nodejs.org"
 primary_contact: "security@nodejs.org"
+language: c++
+fuzzing_engines:
+  - libfuzzer
+sanitizers:
+  - address
+auto_ccs:
+  - "david@adalogics.com"

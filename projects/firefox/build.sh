@@ -24,6 +24,7 @@ FUZZ_TARGETS=(
   ContentParentIPC
   CompositorManagerParentIPC
   ContentSecurityPolicyParser
+  FeaturePolicyParser
   # Image
   ImageGIF
   ImageICO
@@ -41,7 +42,7 @@ FUZZ_TARGETS=(
 export MOZ_OBJDIR=$WORK/obj-fuzz
 export MOZCONFIG=$SRC/mozconfig.$SANITIZER
 
-# Install dependencies.
+# Install remaining dependencies.
 export SHELL=/bin/bash
 ./mach bootstrap --no-interactive --application-choice browser
 

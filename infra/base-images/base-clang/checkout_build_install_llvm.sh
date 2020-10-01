@@ -15,7 +15,9 @@
 #
 ################################################################################
 
-LLVM_DEP_PACKAGES="build-essential make cmake ninja-build git python2.7 g++-multilib"
+NPROC=16  # See issue #4270. The compiler crashes on GCB instance with 32 vCPUs.
+
+LLVM_DEP_PACKAGES="build-essential make cmake ninja-build git python2.7 g++-multilib binutils-dev"
 apt-get install -y $LLVM_DEP_PACKAGES
 
 # Checkout
@@ -41,6 +43,20 @@ function clone_with_retries {
   return $CHECKOUT_RETURN_CODE
 }
 
+function cmake_llvm {
+  extra_args="$@"
+  cmake -G "Ninja" \
+      -DLIBCXX_ENABLE_SHARED=OFF \
+      -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
+      -DLIBCXXABI_ENABLE_SHARED=OFF \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DLLVM_TARGETS_TO_BUILD="$TARGET_TO_BUILD" \
+      -DLLVM_ENABLE_PROJECTS="$PROJECTS_TO_BUILD" \
+      -DLLVM_BINUTILS_INCDIR="/usr/include/" \
+      $extra_args \
+      $LLVM_SRC/llvm
+}
+
 # Use chromium's clang revision
 mkdir $SRC/chromium_tools
 cd $SRC/chromium_tools
@@ -50,12 +66,12 @@ cd clang
 LLVM_SRC=$SRC/llvm-project
 
 # For manual bumping.
-OUR_LLVM_REVISION=e84b7a5fe230e42b8e6fe451369874a773bf1867
+OUR_LLVM_REVISION=llvmorg-12-init-1771-g1bd7046e
 
 # To allow for manual downgrades. Set to 0 to use Chrome's clang version (i.e.
 # *not* force a manual downgrade). Set to 1 to force a manual downgrade.
 FORCE_OUR_REVISION=0
-LLVM_REVISION=$(grep -Po "CLANG_REVISION = '\K[a-f0-9]+(?=')" scripts/update.py)
+LLVM_REVISION=$(grep -Po "CLANG_REVISION = '\K([^']+)" scripts/update.py)
 
 clone_with_retries https://github.com/llvm/llvm-project.git $LLVM_SRC
 
@@ -94,40 +110,34 @@ case $(uname -m) in
 esac
 
 PROJECTS_TO_BUILD="libcxx;libcxxabi;compiler-rt;clang;lld"
-cmake -G "Ninja" \
-      -DLIBCXX_ENABLE_SHARED=OFF -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON -DLIBCXXABI_ENABLE_SHARED=OFF \
-      -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="$TARGET_TO_BUILD" \
-      -DLLVM_ENABLE_PROJECTS=$PROJECTS_TO_BUILD \
-      $LLVM_SRC/llvm
-ninja
+
+cmake_llvm
+ninja -j $NPROC
 
 cd $WORK/llvm-stage2
 export CC=$WORK/llvm-stage1/bin/clang
 export CXX=$WORK/llvm-stage1/bin/clang++
-cmake -G "Ninja" \
-      -DLIBCXX_ENABLE_SHARED=OFF -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON -DLIBCXXABI_ENABLE_SHARED=OFF \
-      -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="$TARGET_TO_BUILD" \
-      -DLLVM_ENABLE_PROJECTS=$PROJECTS_TO_BUILD \
-      $LLVM_SRC/llvm
-ninja
+cmake_llvm
+ninja -j $NPROC
 ninja install
 rm -rf $WORK/llvm-stage1 $WORK/llvm-stage2
 
+# Use the clang we just built from now on.
+CMAKE_EXTRA_ARGS="-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++"
+
+# 32-bit libraries.
 mkdir -p $WORK/i386
 cd $WORK/i386
-cmake -G "Ninja" \
-      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-      -DCMAKE_INSTALL_PREFIX=/usr/i386/ -DLIBCXX_ENABLE_SHARED=OFF \
-      -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON -DCMAKE_BUILD_TYPE=Release \
-      -DCMAKE_C_FLAGS="-m32" -DCMAKE_CXX_FLAGS="-m32" \
-      -DLLVM_TARGETS_TO_BUILD="$TARGET_TO_BUILD" \
-      -DLLVM_ENABLE_PROJECTS=$PROJECTS_TO_BUILD \
-      $LLVM_SRC/llvm
+cmake_llvm $CMAKE_EXTRA_ARGS \
+    -DCMAKE_INSTALL_PREFIX=/usr/i386/ \
+    -DCMAKE_C_FLAGS="-m32" \
+    -DCMAKE_CXX_FLAGS="-m32"
 
-ninja cxx
+ninja -j $NPROC cxx
 ninja install-cxx
 rm -rf $WORK/i386
 
+# MemorySanitizer instrumented libraries.
 mkdir -p $WORK/msan
 cd $WORK/msan
 
@@ -136,19 +146,30 @@ cat <<EOF > $WORK/msan/blacklist.txt
 fun:__gxx_personality_*
 EOF
 
-cmake -G "Ninja" \
-      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-      -DLLVM_USE_SANITIZER=Memory -DCMAKE_INSTALL_PREFIX=/usr/msan/ \
-      -DLIBCXX_ENABLE_SHARED=OFF -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON \
-      -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD="$TARGET_TO_BUILD" \
-      -DCMAKE_CXX_FLAGS="-fsanitize-blacklist=$WORK/msan/blacklist.txt" \
-      -DLLVM_ENABLE_PROJECTS=$PROJECTS_TO_BUILD \
-      $LLVM_SRC/llvm
-ninja cxx
+cmake_llvm $CMAKE_EXTRA_ARGS \
+    -DLLVM_USE_SANITIZER=Memory \
+    -DCMAKE_INSTALL_PREFIX=/usr/msan/ \
+    -DCMAKE_CXX_FLAGS="-fsanitize-blacklist=$WORK/msan/blacklist.txt"
+
+ninja -j $NPROC cxx
 ninja install-cxx
 rm -rf $WORK/msan
 
+# DataFlowSanitizer instrumented libraries.
+mkdir -p $WORK/dfsan
+cd $WORK/dfsan
+
+cmake_llvm $CMAKE_EXTRA_ARGS \
+    -DLLVM_USE_SANITIZER=DataFlow \
+    -DCMAKE_INSTALL_PREFIX=/usr/dfsan/
+
+ninja -j $NPROC cxx cxxabi
+ninja install-cxx install-cxxabi
+rm -rf $WORK/dfsan
+
+# libFuzzer sources.
 cp -r $LLVM_SRC/compiler-rt/lib/fuzzer $SRC/libfuzzer
+
 # Cleanup
 rm -rf $LLVM_SRC
 rm -rf $SRC/chromium_tools
