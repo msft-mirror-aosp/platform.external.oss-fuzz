@@ -1,4 +1,4 @@
-# Copyright 2019 Google Inc.
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,43 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && apt-get install -y make autoconf automake build-essential libbz2-dev libc6-dev libffi-dev libfreetype6-dev libgdbm-dev libjpeg-turbo8-dev liblcms2-dev libncursesw5-dev libreadline-dev libsqlite3-dev libssl-dev libtiff5-dev libtool libwebp-dev make python python-dev python-setuptools tk-dev wget zlib1g-dev libwebp-dev
-RUN wget https://github.com/python/cpython/archive/v3.8.1.tar.gz
-RUN git clone --depth 1 https://github.com/python-pillow/Pillow.git pillow
-RUN git clone --depth 1 https://github.com/guidovranken/oss-fuzz-fuzzers
-WORKDIR pillow
+RUN git clone --depth 1 https://github.com/google/fuzzing
+RUN cat fuzzing/dictionaries/bmp.dict \
+        fuzzing/dictionaries/dds.dict \
+        fuzzing/dictionaries/gif.dict \
+        fuzzing/dictionaries/icns.dict \
+        fuzzing/dictionaries/jpeg.dict \
+        fuzzing/dictionaries/jpeg2000.dict \
+        fuzzing/dictionaries/pbm.dict \
+        fuzzing/dictionaries/png.dict \
+        fuzzing/dictionaries/psd.dict \
+        fuzzing/dictionaries/tiff.dict \
+        fuzzing/dictionaries/webp.dict \
+      > $OUT/fuzz_pillow.dict
+RUN apt-get install -y \
+      libfreetype6-dev \
+      libfribidi-dev \
+      libharfbuzz-dev \
+      libjpeg-dev \
+      liblcms2-dev \
+      libopenjp2-7-dev \
+      libpng-dev \
+      libtiff-dev \
+      libwebp-dev \
+      libx11-xcb-dev \
+      libxcb-render0-dev \
+      libxcb-xfixes0-dev \
+      libxcb1-dev \
+      libz-dev \
+      python3-tk \
+      tcl8.6-dev \
+      tk8.6-dev \
+      zlib1g-dev 
+RUN git clone --depth 1 https://github.com/python-pillow/Pillow
+# install extra test images for a better starting corpus
+RUN cd Pillow && depends/install_extra_test_images.sh
+
 COPY build.sh $SRC/
+COPY fuzz_* $SRC/Pillow
+
+WORKDIR $SRC/Pillow

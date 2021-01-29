@@ -77,7 +77,8 @@ This configuration file stores project metadata. The following attributes are su
 - [homepage](#homepage)
 - [language](#language)
 - [primary_contact](#primary)
-- [auto_ccs](#primary)
+- [auto_ccs](#auto_ccs)
+- [main_repo](#main_repo)
 - [vendor_ccs](#vendor) (optional)
 - [sanitizers](#sanitizers) (optional)
 - [architectures](#architectures) (optional)
@@ -95,10 +96,14 @@ Programming language the project is written in. Values you can specify include:
 * `c++`
 * [`go`]({{ site.baseurl }}//getting-started/new-project-guide/go-lang/)
 * [`rust`]({{ site.baseurl }}//getting-started/new-project-guide/rust-lang/)
+* [`python`]({{ site.baseurl }}//getting-started/new-project-guide/python-lang/)
 
 ### primary_contact, auto_ccs {#primary}
 The primary contact and list of other contacts to be CCed. Each person listed gets access to ClusterFuzz, including crash reports and fuzzer statistics, and are auto-cced on new bugs filed in the OSS-Fuzz
 tracker. If you're a primary or a CC, you'll need to use a [Google account](https://support.google.com/accounts/answer/176347?hl=en) to get full access. ([why?]({{ site.baseurl }}/faq/#why-do-you-require-a-google-account-for-authentication)).
+
+### main_repo {#main_repo}
+Path to source code repository hosting the code, e.g. `https://path/to/main/repo.git`. 
 
 ### vendor_ccs (optional) {#vendor}
 The list of vendor email addresses that are downstream consumers of the project and want access to
@@ -417,7 +422,7 @@ via GitHub.
 Please include copyright headers for all files checked in to oss-fuzz:
 
 ```
-# Copyright 2019 Google Inc.
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
