@@ -9,12 +9,11 @@ third_party {
     type: GIT
     value: "https://github.com/google/oss-fuzz.git"
   }
-  version: "167aec47bf047e3b3ccf01c5e4e3030144e86eea"
-  # would be NOTICE save for projects/gnupg/fuzzgnupg.diff
+  version: "e4a2de5fab58f8fa35f8c04980b8893aecc53372"
   license_type: RESTRICTED
   last_upgrade_date {
     year: 2021
-    month: 1
+    month: 2
     day: 5
   }
 }
