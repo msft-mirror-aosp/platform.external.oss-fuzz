@@ -39,7 +39,7 @@ Before you can start setting up your new project for fuzzing, you must do the fo
   [docker-cleanup](https://gist.github.com/mikea/d23a839cba68778d94e0302e8a2c200f)
   periodically to garbage-collect unused images.
 
-- (optional) [Install gsutil](https://cloud.google.com/storage/docs/gsutil_install) for local code coverage sanity check.
+- (optional) [Install gsutil](https://cloud.google.com/storage/docs/gsutil_install) for local code coverage testing.
   For Google internal (gLinux) machines, please refer [here](https://cloud.google.com/storage/docs/gsutil_install#deb) instead.
 
 ## Creating the file structure
@@ -240,7 +240,7 @@ If your project is written in Go, check out the [Integrating a Go project]({{ si
 
 **Note:**
 
-1. Don't assume the fuzzing engine is libFuzzer by default, because we generate builds for libFuzzer, AFL and Honggfuzz fuzzing engine configurations. Instead, link the fuzzing engine using $LIB_FUZZING_ENGINE.
+1. Don't assume the fuzzing engine is libFuzzer by default, because we generate builds for libFuzzer, AFL++ and Honggfuzz fuzzing engine configurations. Instead, link the fuzzing engine using $LIB_FUZZING_ENGINE.
 2. Make sure that the binary names for your [fuzz targets]({{ site.baseurl }}/reference/glossary/#fuzz-target) contain only
 alphanumeric characters, underscore(_) or dash(-). Otherwise, they won't run on our infrastructure.
 3. Don't remove source code files. They are needed for code coverage.
@@ -322,13 +322,12 @@ You can build your docker image and fuzz targets locally, so you can test them b
 3. If you want to test changes against a particular fuzz target, run the following command:
 
     ```bash
-    $ python infra/helper.py run_fuzzer $PROJECT_NAME <fuzz_target> --corpus-dir=<path-to-temp-corpus-dir>
+    $ python infra/helper.py run_fuzzer --corpus-dir=<path-to-temp-corpus-dir> $PROJECT_NAME <fuzz_target>
     ```
 
-4. We recommend taking a look at your code coverage as a sanity check to make
-sure that your fuzz targets get to the code you expect. This would use the
-corpus generated from the previous `run_fuzzer` step in your local corpus
-directory.
+4. We recommend taking a look at your code coverage as a test to ensure that
+your fuzz targets get to the code you expect. This would use the corpus
+generated from the previous `run_fuzzer` step in your local corpus directory.
 
     ```bash
     $ python infra/helper.py build_fuzzers --sanitizer coverage $PROJECT_NAME
