@@ -1,5 +1,4 @@
-#!/bin/bash -eu
-# Copyright 2020 Google Inc.
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +14,10 @@
 #
 ################################################################################
 
-mkdir $GOPATH/src/github.com/gohugoio
-mv $SRC/hugo $GOPATH/src/github.com/gohugoio/
-cd $GOPATH/src/github.com/gohugoio/hugo
-
-compile_go_fuzzer github.com/gohugoio/hugo/tpl/transform FuzzMarkdownify fuzzmarkdownify
+FROM gcr.io/oss-fuzz-base/base-builder
+RUN apt-get update
+RUN apt-get install -y pkg-config zlib1g-dev libffi-dev
+RUN pip3 install -U meson ninja
+RUN git clone --depth 1 https://github.com/fwupd/fwupd.git fwupd
+WORKDIR .
+COPY build.sh $SRC/
