@@ -1,5 +1,5 @@
 #!/bin/bash -eu
-# Copyright 2020 Google Inc.
+# Copyright 2020 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,4 @@
 #
 ################################################################################
 
-mkdir $GOPATH/src/github.com/gohugoio
-mv $SRC/hugo $GOPATH/src/github.com/gohugoio/
-cd $GOPATH/src/github.com/gohugoio/hugo
-
-compile_go_fuzzer github.com/gohugoio/hugo/tpl/transform FuzzMarkdownify fuzzmarkdownify
+python3 fwupd/contrib/ci/oss-fuzz.py
