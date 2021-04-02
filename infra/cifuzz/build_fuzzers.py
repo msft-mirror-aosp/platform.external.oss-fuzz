@@ -20,6 +20,7 @@ import sys
 
 import affected_fuzz_targets
 import continuous_integration
+import docker
 
 # pylint: disable=wrong-import-position,import-error
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -77,7 +78,8 @@ class Builder:  # pylint: disable=too-many-instance-attributes
   def build_fuzzers(self):
     """Moves the source code we want to fuzz into the project builder and builds
     the fuzzers from that source code. Returns True on success."""
-    docker_args = get_common_docker_args(self.config.sanitizer)
+    docker_args = get_common_docker_args(self.config.sanitizer,
+                                         self.config.language)
     container = utils.get_container_name()
 
     if container:
@@ -93,7 +95,7 @@ class Builder:  # pylint: disable=too-many-instance-attributes
       self.handle_msan_prebuild(container)
 
     docker_args.extend([
-        'gcr.io/oss-fuzz/' + self.config.project_name,
+        docker.get_project_image_name(self.config.project_name),
         '/bin/bash',
         '-c',
     ])
@@ -118,8 +120,7 @@ class Builder:  # pylint: disable=too-many-instance-attributes
     helper.docker_run([
         '--volumes-from', container, '-e',
         'WORK={work_dir}'.format(work_dir=self.work_dir),
-        'gcr.io/oss-fuzz-base/base-sanitizer-libs-builder', 'patch_build.py',
-        '/out'
+        docker.MSAN_LIBS_BUILDER_TAG, 'patch_build.py', '/out'
     ])
 
   def handle_msan_prebuild(self, container):
@@ -127,8 +128,8 @@ class Builder:  # pylint: disable=too-many-instance-attributes
     returns docker arguments to use that directory for MSAN libs."""
     logging.info('Copying MSAN libs.')
     helper.docker_run([
-        '--volumes-from', container, 'gcr.io/oss-fuzz-base/msan-libs-builder',
-        'bash', '-c', 'cp -r /msan {work_dir}'.format(work_dir=self.work_dir)
+        '--volumes-from', container, docker.MSAN_LIBS_BUILDER_TAG, 'bash', '-c',
+        'cp -r /msan {work_dir}'.format(work_dir=self.work_dir)
     ])
 
   def build(self):
@@ -185,7 +186,7 @@ def build_fuzzers(config):
   return builder.build()
 
 
-def get_common_docker_args(sanitizer):
+def get_common_docker_args(sanitizer, language):
   """Returns a list of common docker arguments."""
   return [
       '--cap-add',
@@ -199,12 +200,13 @@ def get_common_docker_args(sanitizer):
       '-e',
       'CIFUZZ=True',
       '-e',
-      'FUZZING_LANGUAGE=c++',  # FIXME: Add proper support.
+      'FUZZING_LANGUAGE=' + language,
   ]
 
 
 def check_fuzzer_build(out_dir,
-                       sanitizer='address',
+                       sanitizer,
+                       language,
                        allowed_broken_targets_percentage=None):
   """Checks the integrity of the built fuzzers.
 
@@ -222,7 +224,7 @@ def check_fuzzer_build(out_dir,
     logging.error('No fuzzers found in out directory: %s.', out_dir)
     return False
 
-  command = get_common_docker_args(sanitizer)
+  command = get_common_docker_args(sanitizer, language)
 
   if allowed_broken_targets_percentage is not None:
     command += [
@@ -236,7 +238,7 @@ def check_fuzzer_build(out_dir,
     command += ['-e', 'OUT=' + out_dir, '--volumes-from', container]
   else:
     command += ['-v', '%s:/out' % out_dir]
-  command.extend(['-t', 'gcr.io/oss-fuzz-base/base-runner', 'test_all.py'])
+  command.extend(['-t', docker.BASE_RUNNER_TAG, 'test_all.py'])
   exit_code = helper.docker_run(command)
   logging.info('check fuzzer build exit code: %d', exit_code)
   if exit_code:

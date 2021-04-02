@@ -91,7 +91,9 @@ class BaseFuzzTargetRunner:
     """Fuzzes with |fuzz_target_obj| and returns the result."""
     # TODO(metzman): Make children implement this so that the batch runner can
     # do things differently.
-    return fuzz_target_obj.fuzz()
+    result = fuzz_target_obj.fuzz()
+    fuzz_target_obj.free_disk_if_needed()
+    return result
 
   @property
   def quit_on_bug_found(self):
@@ -100,9 +102,12 @@ class BaseFuzzTargetRunner:
     raise NotImplementedError('Child class must implement method')
 
   def get_fuzz_target_artifact(self, target, artifact_name):
-    """Returns the path of a fuzzing |artifact| named |artifact_name| for
-    |target|."""
-    artifact_name = target.target_name + '-' + artifact_name
+    """Returns the path of a fuzzing artifact named |artifact_name| for
+    |fuzz_target|."""
+    artifact_name = '{target_name}-{sanitizer}-{artifact_name}'.format(
+        target_name=target.target_name,
+        sanitizer=self.config.sanitizer,
+        artifact_name=artifact_name)
     return os.path.join(self.artifacts_dir, artifact_name)
 
   def create_fuzz_target_obj(self, target_path, run_seconds):
@@ -140,12 +145,9 @@ class BaseFuzzTargetRunner:
                      target.target_name)
         continue
 
-      # We found a bug in the fuzz target.
-      utils.binary_print(b'Fuzzer: %s. Detected bug:\n%s' %
-                         (target.target_name.encode(), result.stacktrace))
-
       # TODO(metzman): Do this with filestore.
-      testcase_artifact_path = self.get_fuzz_target_artifact(target, 'testcase')
+      testcase_artifact_path = self.get_fuzz_target_artifact(
+          target, os.path.basename(result.testcase))
       shutil.move(result.testcase, testcase_artifact_path)
       bug_summary_artifact_path = self.get_fuzz_target_artifact(
           target, 'bug-summary.txt')
