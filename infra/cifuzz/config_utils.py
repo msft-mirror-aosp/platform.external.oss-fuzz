@@ -18,14 +18,16 @@ import enum
 import os
 import json
 
+import environment
+
 
 def _get_project_repo_name():
-  return os.path.basename(os.getenv('GITHUB_REPOSITORY', ''))
+  return os.path.basename(environment.get('GITHUB_REPOSITORY', ''))
 
 
 def _get_pr_ref(event):
   if event == 'pull_request':
-    return os.getenv('GITHUB_REF')
+    return environment.get('GITHUB_REF')
   return None
 
 
@@ -40,7 +42,7 @@ def _get_project_name():
 
 def _is_dry_run():
   """Returns True if configured to do a dry run."""
-  return os.getenv('DRY_RUN', 'false').lower() == 'true'
+  return environment.get_bool('DRY_RUN', 'false')
 
 
 def get_project_src_path(workspace):
@@ -62,6 +64,19 @@ def get_project_src_path(workspace):
   return os.path.join(workspace, path)
 
 
+DEFAULT_LANGUAGE = 'c++'
+
+
+def _get_language():
+  """Returns the project language."""
+  # Get language from environment. We took this approach because the convenience
+  # given to OSS-Fuzz users by not making them specify the language again (and
+  # getting it from the project.yaml) is outweighed by the complexity in
+  # implementing this. A lot of the complexity comes from our unittests not
+  # setting a proper projet at this point.
+  return os.getenv('LANGUAGE', DEFAULT_LANGUAGE)
+
+
 # pylint: disable=too-few-public-methods,too-many-instance-attributes
 
 
@@ -81,14 +96,22 @@ class BaseConfig:
     self.dry_run = _is_dry_run()
     self.sanitizer = _get_sanitizer()
     self.build_integration_path = os.getenv('BUILD_INTEGRATION_PATH')
+    self.language = _get_language()
     event_path = os.getenv('GITHUB_EVENT_PATH')
     self.is_github = bool(event_path)
     logging.debug('Is github: %s.', self.is_github)
+    # TODO(metzman): Parse env like we do in ClusterFuzz.
+    self.low_disk_space = environment.get('LOW_DISK_SPACE', False)
+
+  @property
+  def is_internal(self):
+    """Returns True if this is an OSS-Fuzz project."""
+    return not self.build_integration_path
 
   @property
   def platform(self):
     """Returns the platform CIFuzz is runnning on."""
-    if self.build_integration_path:
+    if not self.is_internal:
       return self.Platform.EXTERNAL_GITHUB
     if self.is_github:
       return self.Platform.INTERNAL_GITHUB
@@ -149,6 +172,7 @@ class BuildFuzzersConfig(BaseConfig):
 
     self.allowed_broken_targets_percentage = os.getenv(
         'ALLOWED_BROKEN_TARGETS_PERCENTAGE')
+    self.bad_build_check = environment.get_bool('BAD_BUILD_CHECK', 'true')
 
     # TODO(metzman): Use better system for interpreting env vars. What if env
     # var is set to '0'?
