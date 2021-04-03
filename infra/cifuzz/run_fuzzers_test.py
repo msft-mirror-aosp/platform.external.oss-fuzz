@@ -37,13 +37,13 @@ import test_helpers
 EXAMPLE_PROJECT = 'example'
 
 # Location of files used for testing.
-TEST_FILES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               'test_files')
+TEST_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              'test_data')
 
-MEMORY_FUZZER_DIR = os.path.join(TEST_FILES_PATH, 'memory')
+MEMORY_FUZZER_DIR = os.path.join(TEST_DATA_PATH, 'memory')
 MEMORY_FUZZER = 'curl_fuzzer_memory'
 
-UNDEFINED_FUZZER_DIR = os.path.join(TEST_FILES_PATH, 'undefined')
+UNDEFINED_FUZZER_DIR = os.path.join(TEST_DATA_PATH, 'undefined')
 UNDEFINED_FUZZER = 'curl_fuzzer_undefined'
 
 FUZZ_SECONDS = 10
@@ -227,7 +227,8 @@ class BaseFuzzTargetRunnerTest(unittest.TestCase):
     target.target_name = target_name
     fuzz_target_artifact = runner.get_fuzz_target_artifact(
         target, artifact_name)
-    expected_fuzz_target_artifact = 'artifacts-dir/target_name-artifact-name'
+    expected_fuzz_target_artifact = (
+        'artifacts-dir/target_name-address-artifact-name')
     self.assertEqual(fuzz_target_artifact, expected_fuzz_target_artifact)
 
 
@@ -263,7 +264,7 @@ class CiFuzzTargetRunnerTest(fake_filesystem_unittest.TestCase):
     magic_mock.target_name = 'target1'
     mocked_create_fuzz_target_obj.return_value = magic_mock
     self.assertTrue(runner.run_fuzz_targets())
-    self.assertIn('target1-testcase', os.listdir(runner.artifacts_dir))
+    self.assertIn('target1-address-testcase', os.listdir(runner.artifacts_dir))
     self.assertEqual(mocked_run_fuzz_target.call_count, 1)
 
 
@@ -279,7 +280,7 @@ class BatchFuzzTargetRunnerTest(fake_filesystem_unittest.TestCase):
   def test_run_fuzz_targets_quits(self, mocked_create_fuzz_target_obj,
                                   mocked_run_fuzz_target,
                                   mocked_get_fuzz_targets):
-    """Tests that run_fuzz_targets quits on the first crash it finds."""
+    """Tests that run_fuzz_targets doesn't quit on the first crash it finds."""
     workspace = 'workspace'
     out_path = os.path.join(workspace, 'out')
     self.fs.create_dir(out_path)
@@ -290,8 +291,8 @@ class BatchFuzzTargetRunnerTest(fake_filesystem_unittest.TestCase):
 
     mocked_get_fuzz_targets.return_value = ['target1', 'target2']
     runner.initialize()
-    testcase1 = os.path.join(workspace, 'testcase1')
-    testcase2 = os.path.join(workspace, 'testcase2')
+    testcase1 = os.path.join(workspace, 'testcase-aaa')
+    testcase2 = os.path.join(workspace, 'testcase-bbb')
     self.fs.create_file(testcase1)
     self.fs.create_file(testcase2)
     stacktrace = b'stacktrace'
@@ -312,7 +313,8 @@ class BatchFuzzTargetRunnerTest(fake_filesystem_unittest.TestCase):
     magic_mock.target_name = 'target1'
     mocked_create_fuzz_target_obj.return_value = magic_mock
     self.assertTrue(runner.run_fuzz_targets())
-    self.assertIn('target1-testcase', os.listdir(runner.artifacts_dir))
+    self.assertIn('target1-address-testcase-aaa',
+                  os.listdir(runner.artifacts_dir))
     self.assertEqual(mocked_run_fuzz_target.call_count, 2)
 
 
@@ -333,7 +335,7 @@ class RunAddressFuzzersIntegrationTest(RunFuzzerIntegrationTestMixin,
                     side_effect=[True, False]):
       with tempfile.TemporaryDirectory() as tmp_dir:
         workspace = os.path.join(tmp_dir, 'workspace')
-        shutil.copytree(TEST_FILES_PATH, workspace)
+        shutil.copytree(TEST_DATA_PATH, workspace)
         config = _create_config(fuzz_seconds=FUZZ_SECONDS,
                                 workspace=workspace,
                                 project_name=EXAMPLE_PROJECT)
@@ -349,17 +351,17 @@ class RunAddressFuzzersIntegrationTest(RunFuzzerIntegrationTestMixin,
   def test_old_bug_found(self, _):
     """Tests run_fuzzers with a bug found in OSS-Fuzz before."""
     config = _create_config(fuzz_seconds=FUZZ_SECONDS,
-                            workspace=TEST_FILES_PATH,
+                            workspace=TEST_DATA_PATH,
                             project_name=EXAMPLE_PROJECT)
     with tempfile.TemporaryDirectory() as tmp_dir:
       workspace = os.path.join(tmp_dir, 'workspace')
-      shutil.copytree(TEST_FILES_PATH, workspace)
+      shutil.copytree(TEST_DATA_PATH, workspace)
       config = _create_config(fuzz_seconds=FUZZ_SECONDS,
-                              workspace=TEST_FILES_PATH,
+                              workspace=TEST_DATA_PATH,
                               project_name=EXAMPLE_PROJECT)
       result = run_fuzzers.run_fuzzers(config)
       self.assertEqual(result, run_fuzzers.RunFuzzersResult.NO_BUG_FOUND)
-      build_dir = os.path.join(TEST_FILES_PATH, 'out', self.BUILD_DIR_NAME)
+      build_dir = os.path.join(TEST_DATA_PATH, 'out', self.BUILD_DIR_NAME)
       self.assertTrue(os.path.exists(build_dir))
       self.assertNotEqual(0, len(os.listdir(build_dir)))
 
