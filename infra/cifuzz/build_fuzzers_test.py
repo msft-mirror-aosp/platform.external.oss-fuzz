@@ -36,9 +36,9 @@ import test_helpers
 # https://github.com/google/oss-fuzz/tree/master/projects/example project.
 EXAMPLE_PROJECT = 'example'
 
-# Location of files used for testing.
-TEST_FILES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                               'test_files')
+# Location of data used for testing.
+TEST_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              'test_data')
 
 # An example fuzzer that triggers an crash.
 # Binary is a copy of the example project's do_stuff_fuzzer and can be
@@ -251,10 +251,13 @@ class BuildFuzzersIntegrationTest(unittest.TestCase):
 class CheckFuzzerBuildTest(unittest.TestCase):
   """Tests the check_fuzzer_build function in the cifuzz module."""
 
+  SANITIZER = 'address'
+  LANGUAGE = 'c++'
+
   def setUp(self):
     self.tmp_dir_obj = tempfile.TemporaryDirectory()
     self.test_files_path = os.path.join(self.tmp_dir_obj.name, 'test_files')
-    shutil.copytree(TEST_FILES_PATH, self.test_files_path)
+    shutil.copytree(TEST_DATA_PATH, self.test_files_path)
 
   def tearDown(self):
     self.tmp_dir_obj.cleanup()
@@ -262,23 +265,31 @@ class CheckFuzzerBuildTest(unittest.TestCase):
   def test_correct_fuzzer_build(self):
     """Checks check_fuzzer_build function returns True for valid fuzzers."""
     test_fuzzer_dir = os.path.join(self.test_files_path, 'out')
-    self.assertTrue(build_fuzzers.check_fuzzer_build(test_fuzzer_dir))
+    self.assertTrue(
+        build_fuzzers.check_fuzzer_build(test_fuzzer_dir, self.SANITIZER,
+                                         self.LANGUAGE))
 
   def test_not_a_valid_fuzz_path(self):
     """Tests that False is returned when a bad path is given."""
-    self.assertFalse(build_fuzzers.check_fuzzer_build('not/a/valid/path'))
+    self.assertFalse(
+        build_fuzzers.check_fuzzer_build('not/a/valid/path', self.SANITIZER,
+                                         self.LANGUAGE))
 
   def test_not_a_valid_fuzzer(self):
     """Checks a directory that exists but does not have fuzzers is False."""
-    self.assertFalse(build_fuzzers.check_fuzzer_build(self.test_files_path))
+    self.assertFalse(
+        build_fuzzers.check_fuzzer_build(self.test_files_path, self.SANITIZER,
+                                         self.LANGUAGE))
 
   @mock.patch('helper.docker_run')
   def test_allow_broken_fuzz_targets_percentage(self, mocked_docker_run):
     """Tests that ALLOWED_BROKEN_TARGETS_PERCENTAGE is set when running
     docker if passed to check_fuzzer_build."""
     mocked_docker_run.return_value = 0
-    test_fuzzer_dir = os.path.join(TEST_FILES_PATH, 'out')
+    test_fuzzer_dir = os.path.join(TEST_DATA_PATH, 'out')
     build_fuzzers.check_fuzzer_build(test_fuzzer_dir,
+                                     self.SANITIZER,
+                                     self.LANGUAGE,
                                      allowed_broken_targets_percentage='0')
     self.assertIn('-e ALLOWED_BROKEN_TARGETS_PERCENTAGE=0',
                   ' '.join(mocked_docker_run.call_args[0][0]))

@@ -22,7 +22,6 @@ from multiprocessing.dummy import Pool as ThreadPool
 import argparse
 import datetime
 import errno
-import multiprocessing
 import os
 import pipes
 import re
@@ -59,15 +58,61 @@ CORPUS_BACKUP_URL_FORMAT = (
 PROJECT_LANGUAGE_REGEX = re.compile(r'\s*language\s*:\s*([^\s]+)')
 
 # Languages from project.yaml that have code coverage support.
-LANGUAGES_WITH_COVERAGE_SUPPORT = ['c', 'c++', 'go']
+LANGUAGES_WITH_COVERAGE_SUPPORT = ['c', 'c++', 'go', 'rust']
+
+# pylint: disable=too-many-lines
 
 
-def main():  # pylint: disable=too-many-branches,too-many-return-statements,too-many-statements
+def main():  # pylint: disable=too-many-branches,too-many-return-statements
   """Get subcommand from program arguments and do it."""
   os.chdir(OSS_FUZZ_DIR)
   if not os.path.exists(BUILD_DIR):
     os.mkdir(BUILD_DIR)
 
+  args = parse_args()
+
+  # We have different default values for `sanitizer` depending on the `engine`.
+  # Some commands do not have `sanitizer` argument, so `hasattr` is necessary.
+  if hasattr(args, 'sanitizer') and not args.sanitizer:
+    if args.engine == 'dataflow':
+      args.sanitizer = 'dataflow'
+    else:
+      args.sanitizer = 'address'
+
+  if args.command == 'generate':
+    return generate(args)
+  if args.command == 'build_image':
+    return build_image(args)
+  if args.command == 'build_fuzzers':
+    return build_fuzzers(args)
+  if args.command == 'check_build':
+    return check_build(args)
+  if args.command == 'download_corpora':
+    return download_corpora(args)
+  if args.command == 'run_fuzzer':
+    return run_fuzzer(args)
+  if args.command == 'coverage':
+    return coverage(args)
+  if args.command == 'reproduce':
+    return reproduce(args)
+  if args.command == 'shell':
+    return shell(args)
+  if args.command == 'pull_images':
+    return pull_images(args)
+
+  return 0
+
+
+def parse_args(args=None):
+  """Parses args using argparser and returns parsed args."""
+  # Use default argument None for args so that in production, argparse does its
+  # normal behavior, but unittesting is easier.
+  parser = get_parser()
+  return parser.parse_args(args)
+
+
+def get_parser():  # pylint: disable=too-many-statements
+  """Returns an argparse parser."""
   parser = argparse.ArgumentParser('helper.py', description='oss-fuzz helpers')
   subparsers = parser.add_subparsers(dest='command')
 
@@ -112,8 +157,9 @@ def main():  # pylint: disable=too-many-branches,too-many-return-statements,too-
   _add_engine_args(
       check_build_parser,
       choices=['libfuzzer', 'afl', 'honggfuzz', 'dataflow', 'none'])
-  _add_sanitizer_args(check_build_parser,
-                      choices=['address', 'memory', 'undefined', 'dataflow'])
+  _add_sanitizer_args(
+      check_build_parser,
+      choices=['address', 'memory', 'undefined', 'dataflow', 'thread'])
   _add_environment_args(check_build_parser)
   check_build_parser.add_argument('project_name', help='name of the project')
   check_build_parser.add_argument('fuzzer_name',
@@ -189,39 +235,7 @@ def main():  # pylint: disable=too-many-branches,too-many-return-statements,too-
   _add_environment_args(shell_parser)
 
   subparsers.add_parser('pull_images', help='Pull base images.')
-
-  args = parser.parse_args()
-
-  # We have different default values for `sanitizer` depending on the `engine`.
-  # Some commands do not have `sanitizer` argument, so `hasattr` is necessary.
-  if hasattr(args, 'sanitizer') and not args.sanitizer:
-    if args.engine == 'dataflow':
-      args.sanitizer = 'dataflow'
-    else:
-      args.sanitizer = 'address'
-
-  if args.command == 'generate':
-    return generate(args)
-  if args.command == 'build_image':
-    return build_image(args)
-  if args.command == 'build_fuzzers':
-    return build_fuzzers(args)
-  if args.command == 'check_build':
-    return check_build(args)
-  if args.command == 'download_corpora':
-    return download_corpora(args)
-  if args.command == 'run_fuzzer':
-    return run_fuzzer(args)
-  if args.command == 'coverage':
-    return coverage(args)
-  if args.command == 'reproduce':
-    return reproduce(args)
-  if args.command == 'shell':
-    return shell(args)
-  if args.command == 'pull_images':
-    return pull_images(args)
-
-  return 0
+  return parser
 
 
 def is_base_image(image_name):
@@ -335,7 +349,7 @@ def _add_engine_args(parser,
 
 def _add_sanitizer_args(parser,
                         choices=('address', 'memory', 'undefined', 'coverage',
-                                 'dataflow')):
+                                 'dataflow', 'thread')):
   """Add common sanitizer args."""
   parser.add_argument(
       '--sanitizer',
@@ -632,7 +646,7 @@ def check_build(args):
   ]
 
   if args.fuzzer_name:
-    run_args += ['test_one', os.path.join('/out', args.fuzzer_name)]
+    run_args += ['test_one.py', args.fuzzer_name]
   else:
     run_args.append('test_all.py')
 
@@ -672,14 +686,14 @@ def _get_latest_corpus(project_name, fuzz_target, base_corpus_dir):
                                                       fuzz_target=fuzz_target)
   command = ['gsutil', 'ls', corpus_backup_url]
 
-  corpus_listing = subprocess.Popen(command,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE)
-  output, error = corpus_listing.communicate()
+  # Don't capture stderr. We want it to print in real time, in case gsutil is
+  # asking for two-factor authentication.
+  corpus_listing = subprocess.Popen(command, stdout=subprocess.PIPE)
+  output, _ = corpus_listing.communicate()
 
   # Some fuzz targets (e.g. new ones) may not have corpus yet, just skip those.
   if corpus_listing.returncode:
-    print('WARNING: corpus for {0} not found:\n{1}'.format(fuzz_target, error),
+    print('WARNING: corpus for {0} not found:\n'.format(fuzz_target),
           file=sys.stderr)
     return
 
@@ -736,7 +750,7 @@ def download_corpora(args):
 
   print('Downloading corpora for %s project to %s' %
         (args.project_name, corpus_dir))
-  thread_pool = ThreadPool(multiprocessing.cpu_count())
+  thread_pool = ThreadPool()
   return all(thread_pool.map(_download_for_single_target, fuzz_targets))
 
 
@@ -956,8 +970,10 @@ def shell(args):
       'FUZZING_ENGINE=' + args.engine,
       'SANITIZER=' + args.sanitizer,
       'ARCHITECTURE=' + args.architecture,
-      'FUZZING_LANGUAGE=' + _get_project_language(args.project_name),
   ]
+
+  if args.project_name != 'base-runner-debug':
+    env.append('FUZZING_LANGUAGE=' + _get_project_language(args.project_name))
 
   if args.e:
     env += args.e

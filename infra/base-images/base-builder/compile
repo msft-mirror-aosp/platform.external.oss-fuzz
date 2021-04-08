@@ -22,6 +22,21 @@ if [ "$SANITIZER" = "dataflow" ] && [ "$FUZZING_ENGINE" != "dataflow" ]; then
   exit 1
 fi
 
+if [ "$FUZZING_LANGUAGE" = "jvm" ]; then
+  if [ "$FUZZING_ENGINE" != "libfuzzer" ]; then
+    echo "ERROR: JVM projects can be fuzzed with libFuzzer engine only."
+    exit 1
+  fi
+  if [ "$SANITIZER" != "address" ]; then
+    echo "ERROR: JVM projects can be fuzzed with AddressSanitizer only."
+    exit 1
+  fi
+  if [ "$ARCHITECTURE" != "x86_64" ]; then
+    echo "ERROR: JVM projects can be fuzzed on x86_64 architecture only."
+    exit 1
+  fi
+fi
+
 if [ "$FUZZING_LANGUAGE" = "python" ]; then
   if [ "$FUZZING_ENGINE" != "libfuzzer" ]; then
     echo "ERROR: Python projects can be fuzzed with libFuzzer engine only."
@@ -46,7 +61,8 @@ if [[ $ARCHITECTURE == "i386" ]]; then
     export CFLAGS="-m32 $CFLAGS"
     cp -R /usr/i386/lib/* /usr/lib
 fi
-if [[ $FUZZING_ENGINE != "none" ]]; then
+# JVM projects are fuzzed with Jazzer, which has libFuzzer built in.
+if [[ $FUZZING_ENGINE != "none" ]] && [[ $FUZZING_LANGUAGE != "jvm" ]]; then
   # compile script might override environment, use . to call it.
   . compile_${FUZZING_ENGINE}
 fi
@@ -87,6 +103,11 @@ if [ "$SANITIZER" != "undefined" ] && [ "$SANITIZER" != "coverage" ] && [ "$ARCH
 else
   export RUSTFLAGS="--cfg fuzzing -Cdebuginfo=1 -Cforce-frame-pointers"
 fi
+if [ "$SANITIZER" = "coverage" ]
+then
+    # link to C++ from comment in f5098035eb1a14aa966c8651d88ea3d64323823d
+    export RUSTFLAGS="$RUSTFLAGS -Zinstrument-coverage -C link-arg=-lc++"
+fi
 
 # Add Rust libfuzzer flags.
 # See https://github.com/rust-fuzz/libfuzzer/blob/master/build.rs#L12.
@@ -113,6 +134,11 @@ fi
 # Copy latest llvm-symbolizer in $OUT for stack symbolization.
 cp $(which llvm-symbolizer) $OUT/
 
+# Copy Jazzer to $OUT if needed.
+if [ "$FUZZING_LANGUAGE" = "jvm" ]; then
+  cp $(which jazzer_agent_deploy.jar) $(which jazzer_driver) $(which jazzer_driver_asan) $OUT/
+fi
+
 echo "---------------------------------------------------------------"
 echo "CC=$CC"
 echo "CXX=$CXX"
@@ -124,7 +150,7 @@ BUILD_CMD="bash -eux $SRC/build.sh"
 
 # We need to preserve source code files for generating a code coverage report.
 # We need exact files that were compiled, so copy both $SRC and $WORK dirs.
-COPY_SOURCES_CMD="cp -rL --parents $SRC $WORK /usr/include /usr/local/include $GOPATH $OUT"
+COPY_SOURCES_CMD="cp -rL --parents $SRC $WORK /usr/include /usr/local/include $GOPATH $OSSFUZZ_RUSTPATH $OUT"
 
 if [ "${BUILD_UID-0}" -ne "0" ]; then
   adduser -u $BUILD_UID --disabled-password --gecos '' builder
