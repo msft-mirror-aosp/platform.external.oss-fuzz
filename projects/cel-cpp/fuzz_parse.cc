@@ -16,17 +16,14 @@
 
 #include <string>
 
-#include "parser/options.h"
 #include "parser/parser.h"
 
 #define MAX_RECURSION 0x100
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     std::string str (reinterpret_cast<const char*>(data), size);
-    google::api::expr::parser::ParserOptions options;
-    options.max_recursion_depth = MAX_RECURSION;
     try {
-        auto parse_status = google::api::expr::parser::Parse(str, "fuzzinput", options);
+        auto parse_status = google::api::expr::parser::Parse(str, "fuzzinput", MAX_RECURSION);
         if (!parse_status.ok()) {
             parse_status.status().message();
         }
