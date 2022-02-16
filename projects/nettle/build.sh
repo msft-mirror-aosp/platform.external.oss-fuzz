@@ -56,18 +56,24 @@ then
         cp -R $SRC/nettle $SRC/nettle-with-libgmp/
         cd $SRC/nettle-with-libgmp/
         bash .bootstrap
-        export NETTLE_LIBDIR=`realpath ../nettle-with-libgmp-install`/lib
         if [[ $CFLAGS != *sanitize=memory* ]]
         then
-            ./configure --disable-documentation --disable-openssl --prefix=`realpath ../nettle-with-libgmp-install` --libdir="$NETTLE_LIBDIR"
+            ./configure --disable-documentation --disable-openssl --prefix=`realpath ../nettle-with-libgmp-install`
         else
-            ./configure --disable-documentation --disable-openssl --disable-assembler --prefix=`realpath ../nettle-with-libgmp-install` --libdir="$NETTLE_LIBDIR"
+            ./configure --disable-documentation --disable-openssl --disable-assembler --prefix=`realpath ../nettle-with-libgmp-install`
         fi
         make -j$(nproc)
         make install
 
-        export LIBNETTLE_A_PATH=$NETTLE_LIBDIR/libnettle.a
-        export LIBHOGWEED_A_PATH=$NETTLE_LIBDIR/libhogweed.a
+        if [[ $CFLAGS != *-m32* ]]
+        then
+        export LIBNETTLE_A_PATH=`realpath ../nettle-with-libgmp-install/lib/libnettle.a`
+        export LIBHOGWEED_A_PATH=`realpath ../nettle-with-libgmp-install/lib/libhogweed.a`
+        ls -l $LIBHOGWEED_A_PATH
+        else
+        export LIBNETTLE_A_PATH=`realpath ../nettle-with-libgmp-install/lib32/libnettle.a`
+        export LIBHOGWEED_A_PATH=`realpath ../nettle-with-libgmp-install/lib32/libhogweed.a`
+        fi
         export NETTLE_INCLUDE_PATH=`realpath ../nettle-with-libgmp-install/include`
         export CXXFLAGS="$CXXFLAGS -DCRYPTOFUZZ_NETTLE"
         export LINK_FLAGS="$LINK_FLAGS /usr/local/lib/libgmp.a"
@@ -115,18 +121,24 @@ fi
     cp -R $SRC/nettle $SRC/nettle-with-mini-gmp/
     cd $SRC/nettle-with-mini-gmp/
     bash .bootstrap
-    export NETTLE_LIBDIR=`realpath ../nettle-with-mini-gmp-install`/lib
     if [[ $CFLAGS != *sanitize=memory* ]]
     then
-        ./configure --enable-mini-gmp --disable-documentation --disable-openssl --prefix=`realpath ../nettle-with-mini-gmp-install` --libdir="$NETTLE_LIBDIR"
+        ./configure --enable-mini-gmp --disable-documentation --disable-openssl --prefix=`realpath ../nettle-with-mini-gmp-install`
     else
-        ./configure --enable-mini-gmp --disable-documentation --disable-openssl --disable-assembler --prefix=`realpath ../nettle-with-mini-gmp-install` --libdir="$NETTLE_LIBDIR"
+        ./configure --enable-mini-gmp --disable-documentation --disable-openssl --disable-assembler --prefix=`realpath ../nettle-with-mini-gmp-install`
     fi
     make -j$(nproc)
     make install
 
-    export LIBNETTLE_A_PATH=$NETTLE_LIBDIR/libnettle.a
-    export LIBHOGWEED_A_PATH=$NETTLE_LIBDIR/libhogweed.a
+    if [[ $CFLAGS != *-m32* ]]
+    then
+    export LIBNETTLE_A_PATH=`realpath ../nettle-with-mini-gmp-install/lib/libnettle.a`
+    export LIBHOGWEED_A_PATH=`realpath ../nettle-with-mini-gmp-install/lib/libhogweed.a`
+    ls -l $LIBHOGWEED_A_PATH
+    else
+    export LIBNETTLE_A_PATH=`realpath ../nettle-with-mini-gmp-install/lib32/libnettle.a`
+    export LIBHOGWEED_A_PATH=`realpath ../nettle-with-mini-gmp-install/lib32/libhogweed.a`
+    fi
     export NETTLE_INCLUDE_PATH=`realpath ../nettle-with-mini-gmp-install/include`
     export LINK_FLAGS=""
     export CXXFLAGS="$CXXFLAGS -DCRYPTOFUZZ_NETTLE"

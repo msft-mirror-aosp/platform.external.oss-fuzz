@@ -14,11 +14,11 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder-python
+FROM gcr.io/oss-fuzz-base/base-builder
 
 RUN git clone \
 	--depth 1 \
-	--branch main \
+	--branch master \
 	https://github.com/mozilla/bleach.git
 
 WORKDIR bleach
