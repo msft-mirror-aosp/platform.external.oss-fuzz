@@ -17,7 +17,6 @@
 
 compile_go_fuzzer github.com/google/gonids FuzzParseRule fuzz_parserule
 
-cd $SRC
 unzip emerging.rules.zip
 cd rules
 i=0

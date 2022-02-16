@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 ################################################################################
-FROM gcr.io/oss-fuzz-base/base-builder-rust
+FROM gcr.io/oss-fuzz-base/base-builder
 
 RUN git clone https://github.com/seanmonstar/httparse
 WORKDIR $SRC
