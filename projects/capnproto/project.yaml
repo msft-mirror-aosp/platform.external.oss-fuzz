@@ -3,8 +3,6 @@ language: c++
 primary_contact: "security@sandstorm.io"
 auto_ccs:
   - "p.antoine@catenacyber.fr"
-  - "kenton@cloudflare.com"
 sanitizers:
   - address
-  - undefined
 main_repo: 'https://github.com/capnproto/capnproto'

@@ -21,8 +21,7 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y \
   libc++abi1 \
   m4 \
   yasm \
-  python \
-  patchelf
+  python
 
 # This wrapper of cargo seems to interfere with our build system.
 RUN rm -f /usr/local/bin/cargo

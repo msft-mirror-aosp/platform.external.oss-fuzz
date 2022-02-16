@@ -7,6 +7,5 @@ auto_ccs :
 
 sanitizers:
 - address
-# Disabled MSAN because of https://github.com/google/oss-fuzz/issues/6294
-# - memory
+- memory
 main_repo: 'https://github.com/google/cel-cpp'
