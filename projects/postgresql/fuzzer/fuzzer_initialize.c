@@ -82,9 +82,8 @@ int FuzzerInitialize(char *dbname, char ***argv){
   LocalProcessControlFile(false);
   InitializeMaxBackends();
 		 
-  CreateSharedMemoryAndSemaphores();
-  InitProcess();
   BaseInit();
+  InitProcess();
   PG_SETMASK(&UnBlockSig);
   InitPostgres("dbfuzz", InvalidOid, username, InvalidOid, NULL, false);
  
