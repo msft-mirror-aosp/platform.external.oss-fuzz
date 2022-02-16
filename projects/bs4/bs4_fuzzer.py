@@ -14,13 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
 import sys
+import warnings
 import atheris
 
-with atheris.instrument_imports():
-  import logging
-  import warnings
-  from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup
 
 
 try:
@@ -34,7 +33,6 @@ except ImportError:
     pass
 
 
-@atheris.instrument_func
 def TestOneInput(data):
   """TestOneInput gets random data from the fuzzer, and throws it at bs4."""
   if len(data) < 1:

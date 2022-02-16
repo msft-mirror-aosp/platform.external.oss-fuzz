@@ -16,7 +16,7 @@
 ################################################################################
 
 cd libyang
-git checkout devel
+git checkout libyang2
 
 sed -i 's/add_subdirectory/#add_subdirectory/g' ./tools/CMakeLists.txt
 mkdir build && cd build
