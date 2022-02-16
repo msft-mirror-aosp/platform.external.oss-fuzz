@@ -80,10 +80,9 @@ function deploy_cloud_function {
 	--runtime python38 \
 	--project $project \
 	--timeout 540 \
-	--region us-central1 \
-	--set-env-vars GCP_PROJECT=$project,FUNCTION_REGION=us-central1 \
-	--max-instances 1 \
-	--memory 2048MB
+  --region us-central1 \
+  --set-env-vars GCP_PROJECT=$project,FUNCTION_REGION=us-central1 \
+  --max-instances 1
 }
 
 if [ $# == 1 ]; then
@@ -133,6 +132,11 @@ deploy_cloud_function sync \
 
 deploy_cloud_function base-image-build \
 					  build_base_images \
+					  $BASE_IMAGE_JOB_TOPIC \
+					  $PROJECT_ID
+
+deploy_cloud_function base-msan-build \
+					  build_msan \
 					  $BASE_IMAGE_JOB_TOPIC \
 					  $PROJECT_ID
 
