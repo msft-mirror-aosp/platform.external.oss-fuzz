@@ -18,7 +18,6 @@
 
 (
 cd ../tinyxml2
-make clean
 make -j$(nproc) all
 cp libtinyxml2.a /usr/local/lib/
 cp *.h /usr/local/include/
@@ -47,6 +46,7 @@ cmake --build . --target install
 )
 
 # build project
+git apply ../patch.diff
 mkdir build && cd build
 cmake .. -DBUILD_SHARED_LIBS=OFF
 make -j $(nproc)
