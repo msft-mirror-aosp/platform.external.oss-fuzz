@@ -17,7 +17,7 @@
 ################################################################################
 
 autoreconf -f -i
-./configure --enable-static --disable-man --disable-glib --disable-silent-rules
+./configure --enable-static --disable-man --disable-glib
 make clean
 
 make

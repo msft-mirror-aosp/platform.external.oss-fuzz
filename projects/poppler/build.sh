@@ -27,14 +27,6 @@ rm -rf $WORK/*
 rm -rf $BUILD
 mkdir -p $BUILD
 
-# Install Boost headers
-cd $SRC/
-tar jxf boost_1_76_0.tar.bz2
-cd boost_1_76_0/
-CFLAGS="" CXXFLAGS="" ./bootstrap.sh
-CFLAGS="" CXXFLAGS="" ./b2 headers
-cp -R boost/ /usr/include/
-
 pushd $SRC/zlib
 CFLAGS=-fPIC ./configure --static --prefix=$PREFIX
 make install -j$(nproc)
@@ -46,7 +38,7 @@ make -j$(nproc)
 make install
 
 pushd $SRC/Little-CMS
-./autogen.sh --prefix="$PREFIX" --disable-shared PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
+./configure --prefix="$PREFIX" --disable-shared PKG_CONFIG_PATH="$PKG_CONFIG_PATH"
 make -j$(nproc)
 make install
 
@@ -67,7 +59,7 @@ if [ "$SANITIZER" != "memory" ]; then
     ninja -C _builddir install
     popd
 
-    pushd $SRC/glib-2.70.0
+    pushd $SRC/glib-2.64.2
     meson \
         --prefix=$PREFIX \
         --libdir=lib \
@@ -97,7 +89,7 @@ if [ "$SANITIZER" != "memory" ]; then
     ninja -C _builddir install
     popd
 
-    pushd $SRC/pango
+    pushd $SRC/pango-1.48.0
     meson \
         -Ddefault_library=static \
         --prefix=$PREFIX \
