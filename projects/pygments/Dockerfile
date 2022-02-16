@@ -14,7 +14,7 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder-python
+FROM gcr.io/oss-fuzz-base/base-builder
 
 RUN git clone \
 	--depth 1 \
@@ -58,4 +58,4 @@ RUN cat fuzzing/dictionaries/aff.dict \
         fuzzing/dictionaries/yara.dict \
       > $OUT/pygments_fuzzer.dict
 
-COPY build.sh fuzz_guesser.py fuzz_lexers.py $SRC/
+COPY build.sh pygments_fuzzer.py $SRC/

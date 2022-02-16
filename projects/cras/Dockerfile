@@ -19,7 +19,7 @@
 ################################################################################
 # Defines a docker image that can build cras fuzzers.
 #
-FROM gcr.io/oss-fuzz-base/base-builder-rust
+FROM gcr.io/oss-fuzz-base/base-builder
 
 RUN apt-get -y update && \
       apt-get install -y \
@@ -40,7 +40,6 @@ RUN apt-get -y update && \
       libtool \
       libudev-dev \
       wget \
-      vim \
       zip
 RUN apt-get clean
 RUN cd /tmp && git clone https://github.com/ndevilla/iniparser.git && \

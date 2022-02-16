@@ -14,7 +14,7 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder-python
+FROM gcr.io/oss-fuzz-base/base-builder
 RUN git clone --depth 1 https://github.com/python-lz4/python-lz4
 
 COPY build.sh $SRC/

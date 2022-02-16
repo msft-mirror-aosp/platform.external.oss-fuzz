@@ -4,6 +4,7 @@ language: c
 fuzzing_engines:
   - libfuzzer
   - honggfuzz
+  - dataflow
 auto_ccs:
   - "xt4ubq@gmail.com"
   - "david@adalogics.com"
