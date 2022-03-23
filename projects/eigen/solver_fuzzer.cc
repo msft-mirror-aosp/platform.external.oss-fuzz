@@ -18,6 +18,7 @@
 #include <string>
 
 #include "Eigen/Core"
+#include "Eigen/src/Core/Matrix.h"
 
 using ::Eigen::Matrix;
 using ::Eigen::Dynamic;

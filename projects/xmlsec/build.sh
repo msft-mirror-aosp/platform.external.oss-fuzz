@@ -28,7 +28,7 @@ make -j$(nproc) all
 make install
 
 cd $SRC/libxslt
-./autogen.sh --prefix="$XMLSEC_DEPS_PATH" --with-libxml-src=${SRC}/libxml2
+./autogen.sh --prefix="$XMLSEC_DEPS_PATH"
 make -j$(nproc)
 make install
 
@@ -40,8 +40,7 @@ make -j$(nproc) all
 
 for file in $SRC/xmlsec/tests/oss-fuzz/*_target.c; do
     b=$(basename $file _target.c)
-    echo -e "#include <stdint.h>\n$(cat $file)" > $file
-    $CC $CFLAGS -c $file -I${XMLSEC_DEPS_PATH=}/include/libxml2 -I${XMLSEC_DEPS_PATH=}/include/ -I ./include/ \
+    $CC $CFLAGS -c $file -I /usr/include/libxml2 -I ./include/ \
     -o $OUT/${b}_target.o
     $CXX $CXXFLAGS $OUT/${b}_target.o ./src/.libs/libxmlsec1.a \
     ./src/openssl/.libs/libxmlsec1-openssl.a $LIB_FUZZING_ENGINE \
