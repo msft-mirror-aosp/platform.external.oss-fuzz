@@ -14,7 +14,7 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder-python
+FROM gcr.io/oss-fuzz-base/base-builder
 RUN git clone --depth 1 https://github.com/httplib2/httplib2
 
 COPY build.sh $SRC/

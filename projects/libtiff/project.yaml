@@ -5,8 +5,7 @@ auto_ccs:
   - paul.l.kehrer@gmail.com
 sanitizers:
   - address
-# Disabled MSAN because of https://github.com/google/oss-fuzz/issues/6294
-#  - memory
+  - memory
   - undefined
 architectures:
   - x86_64

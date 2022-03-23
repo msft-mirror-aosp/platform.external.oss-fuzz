@@ -24,6 +24,7 @@ import (
 	"github.com/gohugoio/hugo/hugofs"
 	"github.com/gohugoio/hugo/langs"
 	"github.com/spf13/afero"
+	"github.com/spf13/viper"
 )
 
 func newFuzzDeps(cfg config.Provider) *deps.Deps {
@@ -42,7 +43,7 @@ func newFuzzDeps(cfg config.Provider) *deps.Deps {
 }
 
 func FuzzMarkdownify(data []byte) int {
-	v := config.New()
+	v := viper.New()
 	v.Set("contentDir", "content")
 	ns := New(newFuzzDeps(v))
 
