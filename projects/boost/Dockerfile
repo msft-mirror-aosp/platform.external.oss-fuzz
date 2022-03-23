@@ -15,7 +15,7 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && apt-get install -y g++ python
+RUN apt-get update && apt-get install -y g++
 
 RUN git clone --recursive https://github.com/boostorg/boost.git
 WORKDIR boost
