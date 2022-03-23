@@ -29,7 +29,6 @@ export LD_LIBRARY_PATH="$FFMPEG_DEPS_PATH/lib"
 cd $SRC
 bzip2 -f -d alsa-lib-*
 tar xf alsa-lib-*
-rm alsa-lib-*.tar
 cd alsa-lib-*
 ./configure --prefix="$FFMPEG_DEPS_PATH" --enable-static --disable-shared
 make clean
@@ -45,6 +44,13 @@ make -j$(nproc) all
 make install
 
 cd $SRC/libXext
+./autogen.sh
+./configure --prefix="$FFMPEG_DEPS_PATH" --enable-static
+make clean
+make -j$(nproc)
+make install
+
+cd $SRC/libXfixes
 ./autogen.sh
 ./configure --prefix="$FFMPEG_DEPS_PATH" --enable-static
 make clean
@@ -139,7 +145,7 @@ PKG_CONFIG_PATH="$FFMPEG_DEPS_PATH/lib/pkgconfig" ./configure \
 make clean
 make -j$(nproc) install
 
-# Download test samples, will be used as seed corpus.
+# Download test sampes, will be used as seed corpus.
 # DISABLED.
 # TODO: implement a better way to maintain a minimized seed corpora
 # for all targets. As of 2017-05-04 now the combined size of corpora
@@ -156,10 +162,6 @@ export TEMP_VAR_CODEC="AV_CODEC_ID_H264"
 export TEMP_VAR_CODEC_TYPE="VIDEO"
 
 CONDITIONALS=`grep 'BSF 1$' config.h | sed 's/#define CONFIG_\(.*\)_BSF 1/\1/'`
-if [ -n "${OSS_FUZZ_CI-}" ]; then
-  # When running in CI, check the first targets only to save time and disk space
-  CONDITIONALS=( ${CONDITIONALS[@]:0:2} )
-fi
 for c in $CONDITIONALS ; do
   fuzzer_name=ffmpeg_BSF_${c}_fuzzer
   symbol=`echo $c | sed "s/.*/\L\0/"`
@@ -170,10 +172,6 @@ done
 
 # Build fuzzers for decoders.
 CONDITIONALS=`grep 'DECODER 1$' config.h | sed 's/#define CONFIG_\(.*\)_DECODER 1/\1/'`
-if [ -n "${OSS_FUZZ_CI-}" ]; then
-  # When running in CI, check the first targets only to save time and disk space
-  CONDITIONALS=( ${CONDITIONALS[@]:0:2} )
-fi
 for c in $CONDITIONALS ; do
   fuzzer_name=ffmpeg_AV_CODEC_ID_${c}_fuzzer
   symbol=`echo $c | sed "s/.*/\L\0/"`
@@ -194,7 +192,6 @@ rm `find fate-suite -name '*.dec'`
 rm `find fate-suite -name '*.pcm'`
 
 zip -r $OUT/${fuzzer_name}_seed_corpus.zip fate-suite
-zip -r $OUT/ffmpeg_AV_CODEC_ID_HEVC_fuzzer_seed_corpus.zip fate-suite/hevc fate-suite/hevc-conformance
 
 # Build fuzzer for demuxer fed at IO level
 fuzzer_name=ffmpeg_IO_DEMUXER_fuzzer
@@ -232,10 +229,6 @@ PKG_CONFIG_PATH="$FFMPEG_DEPS_PATH/lib/pkgconfig" ./configure \
     --disable-demuxer=rtp,rtsp,sdp \
 
 CONDITIONALS=`grep 'DEMUXER 1$' config.h | sed 's/#define CONFIG_\(.*\)_DEMUXER 1/\1/'`
-if [ -n "${OSS_FUZZ_CI-}" ]; then
-  # When running in CI, check the first targets only to save time and disk space
-  CONDITIONALS=( ${CONDITIONALS[@]:0:2} )
-fi
 for c in $CONDITIONALS ; do
   fuzzer_name=ffmpeg_dem_${c}_fuzzer
   symbol=`echo $c | sed "s/.*/\L\0/"`
