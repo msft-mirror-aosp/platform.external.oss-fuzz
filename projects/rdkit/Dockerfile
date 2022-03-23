@@ -15,13 +15,7 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && apt-get install -y wget
-
-RUN git clone https://gitlab.com/libeigen/eigen && \
-    mkdir eigen_build && \
-    cd eigen_build && \
-    cmake ../eigen && \
-    make install
+RUN apt-get update && apt-get install -y wget libeigen3-dev
 
 RUN git clone --depth 1 https://github.com/rdkit/rdkit.git $SRC/rdkit
 WORKDIR $SRC/rdkit

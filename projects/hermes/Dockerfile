@@ -16,16 +16,9 @@
 
 FROM gcr.io/oss-fuzz-base/base-builder
 RUN apt-get update && \
-    apt-get install -y make autoconf automake libtool wget \
-    python zip libreadline-dev libatomic-ops-dev
-
-RUN pip3 install meson ninja
-RUN ln -s /usr/local/bin/ninja /usr/bin/ninja
-
-RUN wget https://github.com/unicode-org/icu/archive/refs/tags/cldr/2021-08-25.tar.gz && \
-    tar xzvf ./2021-08-25.tar.gz && \
-    mv ./icu-cldr-2021-08-25/icu4c $SRC/icu
+    apt-get install -y make autoconf automake libtool wget libicu-dev \
+    ninja-build python zip libreadline-dev libatomic-ops-dev
 
 RUN git clone https://github.com/facebook/hermes.git
-WORKDIR $SRC
+WORKDIR hermes
 COPY build.sh $SRC/

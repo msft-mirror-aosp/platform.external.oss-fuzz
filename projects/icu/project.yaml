@@ -11,7 +11,6 @@ auto_ccs:
  - ftang@google.com
 sanitizers:
  - address
-# Disabled MSAN because of https://github.com/google/oss-fuzz/issues/6294
-#  - memory
+ - memory
 
 main_repo: 'https://github.com/unicode-org/icu.git'
