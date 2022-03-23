@@ -15,4 +15,16 @@
 #
 ################################################################################
 
-bazel_build_fuzz_tests
+# build project
+cd upb/cmake
+cmake .
+make -j$(nproc)
+
+# use bazel to build instead ?
+$CC $CFLAGS -I. -I.. -o descriptor.upb.o -c google/protobuf/descriptor.upb.c
+$CXX $CXXFLAGS -DHAVE_FUZZER=1 -std=c++11 -I. -I.. -o fuzz_parsenew.o -c ../tests/file_descriptor_parsenew_fuzzer.cc
+$CXX $CXXFLAGS fuzz_parsenew.o descriptor.upb.o -o $OUT/fuzz_parsenew *.a $LIB_FUZZING_ENGINE
+
+# builds corpus
+cd ..
+find . -name "*.proto" | xargs zip -r $OUT/fuzz_parsenew_seed_corpus.zip

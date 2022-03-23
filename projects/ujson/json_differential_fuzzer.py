@@ -37,15 +37,12 @@ values that are too big or too small is techincally fine; however,
 misinterpreting them is not.
 """
 
-import atheris
+import atheris_no_libfuzzer as atheris
+import json
+import ujson
 import sys
 
-with atheris.instrument_imports():
-  import json
-  import ujson
 
-
-@atheris.instrument_func
 def ClearAllIntegers(data):
   """Used to prevent known bug; sets all integers in data recursively to 0."""
   if type(data) == int:
@@ -59,7 +56,6 @@ def ClearAllIntegers(data):
   return data
 
 
-@atheris.instrument_func
 def TestOneInput(input_bytes):
   fdp = atheris.FuzzedDataProvider(input_bytes)
   original = fdp.ConsumeUnicode(sys.maxsize)

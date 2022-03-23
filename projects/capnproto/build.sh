@@ -16,9 +16,8 @@
 ################################################################################
 
 # build project
-cd c++
-autoreconf -i
-./configure --disable-shared
+mkdir build
+cd build
+cmake -DBUILD_SHARED_LIBS=OFF ..
 make -j$(nproc)
-make -j$(nproc) capnp-llvm-fuzzer-testcase
-cp *fuzzer* $OUT/
+cp c++/src/capnp/*fuzzer* $OUT/

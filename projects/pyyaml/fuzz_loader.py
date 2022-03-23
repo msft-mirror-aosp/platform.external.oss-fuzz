@@ -14,15 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
-
 import atheris
 
-with atheris.instrument_imports():
-  import yaml
+import yaml
 
 
-@atheris.instrument_func
 def TestOneInput(input_bytes):
   try:
     context = yaml.load(input_bytes, Loader=yaml.FullLoader)

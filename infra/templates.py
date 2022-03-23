@@ -17,7 +17,7 @@
 
 PROJECT_YAML_TEMPLATE = """\
 homepage: "<your_project_homepage>"
-language: %(language)s"
+language: <programming_language>  # Example values: c, c++, go, rust.
 primary_contact: "<primary_contact_email>"
 main_repo: "https://path/to/main/repo.git"
 """
@@ -39,19 +39,11 @@ DOCKER_TEMPLATE = """\
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/%(base_builder)s
+FROM gcr.io/oss-fuzz-base/base-builder
 RUN apt-get update && apt-get install -y make autoconf automake libtool
 RUN git clone --depth 1 <git_url> %(project_name)s     # or use other version control
 WORKDIR %(project_name)s
 COPY build.sh $SRC/
-"""
-
-EXTERNAL_DOCKER_TEMPLATE = """\
-FROM gcr.io/oss-fuzz-base/%(base_builder)s:v1
-RUN apt-get update && apt-get install -y make autoconf automake libtool
-RUN COPY . $SRC/%(project_name)s
-WORKDIR %(project_name)s
-COPY .clusterfuzzlite/build.sh $SRC/
 """
 
 BUILD_TEMPLATE = """\
@@ -84,30 +76,3 @@ BUILD_TEMPLATE = """\
 #     /path/to/name_of_fuzzer.cc -o $OUT/name_of_fuzzer \\
 #     $LIB_FUZZING_ENGINE /path/to/library.a
 """
-
-EXTERNAL_BUILD_TEMPLATE = """\
-#!/bin/bash -eu
-
-# build project
-# e.g.
-# ./autogen.sh
-# ./configure
-# make -j$(nproc) all
-
-# build fuzzers
-# e.g.
-# $CXX $CXXFLAGS -std=c++11 -Iinclude \\
-#     /path/to/name_of_fuzzer.cc -o $OUT/name_of_fuzzer \\
-#     $LIB_FUZZING_ENGINE /path/to/library.a
-"""
-
-TEMPLATES = {
-    'build.sh': BUILD_TEMPLATE,
-    'Dockerfile': DOCKER_TEMPLATE,
-    'project.yaml': PROJECT_YAML_TEMPLATE
-}
-
-EXTERNAL_TEMPLATES = {
-    'build.sh': EXTERNAL_BUILD_TEMPLATE,
-    'Dockerfile': EXTERNAL_DOCKER_TEMPLATE
-}
