@@ -14,7 +14,7 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder-jvm
+FROM gcr.io/oss-fuzz-base/base-builder
 RUN apt-get update && apt-get install -y maven
 
 ENV JACKSON_BRANCH=2.13

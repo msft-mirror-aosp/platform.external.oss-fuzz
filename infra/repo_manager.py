@@ -135,7 +135,7 @@ class RepoManager:
              check_result=True)
     self.git(['remote', 'update'], check_result=True)
 
-  def get_commit_list(self, newest_commit, oldest_commit=None, limit=None):
+  def get_commit_list(self, newest_commit, oldest_commit=None):
     """Gets the list of commits(inclusive) between the old and new commits.
 
     Args:
@@ -162,11 +162,7 @@ class RepoManager:
     else:
       commit_range = newest_commit
 
-    limit_args = []
-    if limit:
-      limit_args.append(f'--max-count={limit}')
-
-    out, _, err_code = self.git(['rev-list', commit_range] + limit_args)
+    out, _, err_code = self.git(['rev-list', commit_range])
     commits = out.split('\n')
     commits = [commit for commit in commits if commit]
     if err_code or not commits:

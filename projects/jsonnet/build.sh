@@ -28,5 +28,4 @@ fuzzer=convert_jsonnet_fuzzer
 $CXX $CXXFLAGS -I${INSTALL_DIR}/include $LIB_FUZZING_ENGINE \
   $fuzzer.cc -o $OUT/$fuzzer \
   ${INSTALL_DIR}/build/libjsonnet.a \
-  ${INSTALL_DIR}/build/libmd5.a \
-  ${INSTALL_DIR}/build/libryml.a
+  ${INSTALL_DIR}/build/libmd5.a

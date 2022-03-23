@@ -14,13 +14,13 @@
 #
 ################################################################################
 
-FROM gcr.io/oss-fuzz-base/base-builder-python
+FROM gcr.io/oss-fuzz-base/base-builder
 
 RUN pip3 install hypothesis
 
 RUN git clone \
 	--depth 1 \
-	--branch main \
+	--branch master \
 	https://github.com/ultrajson/ultrajson.git
 
 WORKDIR ultrajson
