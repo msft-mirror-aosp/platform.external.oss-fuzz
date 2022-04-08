@@ -1,5 +1,4 @@
 homepage: "https://android.googlesource.com/platform/external/libhevc/"
-language: c++
 primary_contact: "harish.mahendrakar@ittiam.com"
 sanitizers:
   - address
@@ -14,9 +13,6 @@ vendor_ccs:
   - geuteneier@google.com
   - hollyhall@google.com
   - mikelogan@google.com
-  - maverickm@google.com
-  - warrenwright@google.com
 architectures:
   - x86_64
   - i386
-main_repo: 'https://android.googlesource.com/platform/external/libhevc'

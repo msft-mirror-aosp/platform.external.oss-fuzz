@@ -15,12 +15,8 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && apt-get install -y wget \
-    golang binutils cmake ninja-build liblzma-dev libz-dev \
-    pkg-config autoconf libtool
+MAINTAINER mike.aizatsky@gmail.com
+RUN apt-get update && apt-get install -y cmake ninja-build golang
+
 RUN git clone --depth 1 https://boringssl.googlesource.com/boringssl
-# Use ASN.1 pdu protobuf and converter from the google/fuzzing repo.
-RUN git clone --depth 1 https://github.com/google/fuzzing.git
-RUN git clone --depth 1 https://github.com/google/libprotobuf-mutator.git
-RUN (mkdir LPM && cd LPM && cmake ../libprotobuf-mutator -GNinja -DLIB_PROTO_MUTATOR_DOWNLOAD_PROTOBUF=ON -DLIB_PROTO_MUTATOR_TESTING=OFF -DCMAKE_BUILD_TYPE=Release && ninja)
-COPY *.cc build.sh $SRC/
+COPY build.sh $SRC/

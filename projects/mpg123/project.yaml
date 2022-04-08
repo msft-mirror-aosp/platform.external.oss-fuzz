@@ -1,5 +1,4 @@
 homepage: "https://www.mpg123.de"
-language: c++
 primary_contact: "maintainer@mpg123.org"
 
 sanitizers:

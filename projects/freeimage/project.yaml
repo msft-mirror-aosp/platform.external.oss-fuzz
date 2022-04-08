@@ -1,5 +1,4 @@
 homepage: "http://freeimage.sourceforge.net/"
-language: c++
 primary_contact: "drolon@infonie.fr"
 
 sanitizers:

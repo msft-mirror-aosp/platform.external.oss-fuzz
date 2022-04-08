@@ -1,5 +1,4 @@
 homepage: "https://proj.org/"
-language: c++
 primary_contact: "even.rouault@gmail.com"
 auto_ccs:
   - "hobu.inc@gmail.com"

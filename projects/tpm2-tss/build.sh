@@ -23,14 +23,13 @@ export GEN_FUZZ=1
 
 ./bootstrap
 ./configure \
-  CC=$CC \
-  CXX=$CXX \
+  CC=clang \
+  CXX=clang++ \
   --enable-debug \
   --with-fuzzing=ossfuzz \
   --enable-tcti-fuzzing \
-  --disable-tcti-device \
-  --disable-tcti-mssim \
-  --disable-tcti-swtpm \
+  --enable-tcti-device=no \
+  --enable-tcti-mssim=no \
   --disable-doxygen-doc \
   --disable-shared \
   --disable-fapi

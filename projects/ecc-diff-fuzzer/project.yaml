@@ -1,5 +1,4 @@
 homepage: "https://github.com/catenacyber/elliptic-curve-differential-fuzzer"
-language: c++
 primary_contact: "p.antoine@catenacyber.fr"
 
 architectures:

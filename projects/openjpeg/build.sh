@@ -17,7 +17,7 @@
 
 mkdir build
 cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake ..
 make clean -s
 make -j$(nproc) -s
 cd ..

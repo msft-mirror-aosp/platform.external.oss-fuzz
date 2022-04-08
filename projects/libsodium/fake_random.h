@@ -1,17 +1,3 @@
-// Copyright 2018 Google Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 #ifndef FAKE_RANDOM_H_
 #define FAKE_RANDOM_H_
 
@@ -57,7 +43,7 @@ setup_fake_random(const unsigned char * seed, const size_t seed_size) {
   int fake_random_set = randombytes_set_implementation(&fake_random);
   assert(fake_random_set == 0);
 
-  assert(strcmp(randombytes_implementation_name(), "fake_random") == 0);
+  assert(randombytes_implementation_name() == "fake_random");
   int initialized = sodium_init();
   assert(initialized >= 0);
 }

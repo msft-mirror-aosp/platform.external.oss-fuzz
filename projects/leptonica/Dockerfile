@@ -15,6 +15,7 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
+MAINTAINER taking@google.com
 RUN apt-get update && apt-get install -y make autoconf automake libtool \
   pkg-config cmake nasm
 RUN git clone --depth 1 https://github.com/DanBloomberg/leptonica.git leptonica
@@ -26,4 +27,4 @@ RUN git clone https://www.cl.cam.ac.uk/~mgk25/git/jbigkit jbigkit
 RUN git clone --depth 1 https://github.com/libjpeg-turbo/libjpeg-turbo libjpeg-turbo
 RUN git clone --depth 1 https://github.com/facebook/zstd zstd
 WORKDIR leptonica
-COPY build.sh $SRC/
+COPY build.sh pix_rotate_shear_fuzzer.cc $SRC/

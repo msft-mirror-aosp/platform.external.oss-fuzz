@@ -1,5 +1,4 @@
 homepage: "https://www.openh264.org"
-language: c++
 primary_contact: "huili2@cisco.com"
 auto_ccs:
   - "guangwwa@cisco.com"
@@ -16,4 +15,3 @@ sanitizers:
 architectures:
  - i386
  - x86_64
-main_repo: 'https://github.com/cisco/openh264.git'

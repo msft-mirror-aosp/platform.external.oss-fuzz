@@ -15,7 +15,9 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && \
+MAINTAINER twsmith@mozilla.com
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
     apt-get install -y libstdc++-5-dev libstdc++-5-dev:i386 nasm subversion
 RUN git clone --depth 1 https://github.com/cisco/openh264.git openh264
 WORKDIR openh264

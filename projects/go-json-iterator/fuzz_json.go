@@ -2,11 +2,12 @@
 // Use of this source code is governed by Apache 2 LICENSE.
 // Modified from original file https://github.com/dvyukov/go-fuzz-corpus/blob/master/json/json.go
 
-package jsoniter
+package jsonfuzz
 
 import (
 	"encoding/json"
 	"fmt"
+	jsoniter "github.com/json-iterator/go"
 	"reflect"
 )
 
@@ -20,7 +21,7 @@ func Fuzz(data []byte) int {
 		func() interface{} { return new(S) },
 	} {
 		v := ctor()
-		if ConfigCompatibleWithStandardLibrary.Unmarshal(data, v) != nil {
+		if jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, v) != nil {
 			continue
 		}
 		score = 1
@@ -35,12 +36,12 @@ func Fuzz(data []byte) int {
 			panic("not equal")
 		}
 
-		data1, err := ConfigCompatibleWithStandardLibrary.Marshal(v)
+		data1, err := jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(v)
 		if err != nil {
 			panic(err)
 		}
 		v1 := ctor()
-		if ConfigCompatibleWithStandardLibrary.Unmarshal(data1, v1) != nil {
+		if jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data1, v1) != nil {
 			continue
 		}
 		if !reflect.DeepEqual(v, v1) {
@@ -84,9 +85,9 @@ type Marshaller struct {
 }
 
 func (m *Marshaller) MarshalJSON() ([]byte, error) {
-	return ConfigCompatibleWithStandardLibrary.Marshal(m.v)
+	return jsoniter.ConfigCompatibleWithStandardLibrary.Marshal(m.v)
 }
 
 func (m *Marshaller) UnmarshalJSON(data []byte) error {
-	return ConfigCompatibleWithStandardLibrary.Unmarshal(data, &m.v)
+	return jsoniter.ConfigCompatibleWithStandardLibrary.Unmarshal(data, &m.v)
 }

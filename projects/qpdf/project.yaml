@@ -1,8 +1,6 @@
 homepage: "http://qpdf.sourceforge.net/"
-language: c++
 primary_contact: "qberkenbilt@gmail.com"
 sanitizers:
   - address
   - undefined
   - memory
-main_repo: 'https://github.com/qpdf/qpdf.git'

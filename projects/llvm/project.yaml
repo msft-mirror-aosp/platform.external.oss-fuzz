@@ -1,5 +1,4 @@
 homepage: "http://llvm.org/"
-language: c++
 primary_contact: "kcc@google.com"
 auto_ccs:
   - "mascasa@google.com"
@@ -20,10 +19,9 @@ sanitizers:
   - address
   - memory
 
+# The LLVM build currently supports only libFuzzer
 fuzzing_engines:
-  - libfuzzer
-  - honggfuzz
+    - libfuzzer
 
 # Bug reports are public by default:
 view_restrictions: none
-main_repo: 'https://github.com/llvm/llvm-project.git'

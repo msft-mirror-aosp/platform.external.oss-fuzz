@@ -16,6 +16,7 @@
 
 FROM gcr.io/oss-fuzz-base/base-builder
 
+MAINTAINER mail@joachim-bauch.de
 
 RUN apt-get update && apt-get install -y \
     autoconf \
@@ -38,12 +39,6 @@ RUN hg clone \
     --branch stable \
     http://hg.videolan.org/x265 \
     x265
-
-RUN git clone \
-    --depth 1 \
-    --branch master \
-    https://aomedia.googlesource.com/aom \
-    aom
 
 RUN git clone \
     --depth 1 \

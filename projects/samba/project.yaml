@@ -1,5 +1,4 @@
 homepage: "https://samba.org"
-language: c
 primary_contact: "douglas.bagnall@catalyst.net.nz"
 auto_ccs:
   - "abartlet+google@catalyst.net.nz"
@@ -8,10 +7,8 @@ auto_ccs:
   - "jra@google.com"
   - "sloowfranklin@gmail.com"
   - "gdeschner@gmail.com"
-  - "volker.lendecke@gmail.com"
 fuzzing_engines:
   - libfuzzer
-  - honggfuzz
 sanitizers:
   - address
   - undefined

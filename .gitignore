@@ -1,7 +1,3 @@
 .vscode/
 *.pyc
-/build/
-*~
-.DS_Store
-*.swp
-.venv
+build/

@@ -13,11 +13,12 @@
 # limitations under the License.
 
 FROM gcr.io/oss-fuzz-base/base-builder
+MAINTAINER sffc@google.com
 
 RUN apt-get update && apt-get -y install \
     build-essential \
     cmake \
     libunwind-dev
 RUN git clone https://github.com/google/myanmar-tools.git
-WORKDIR $SRC/myanmar-tools
+WORKDIR $SRC/myanmar-tools/clients/cpp/
 COPY build.sh $SRC/

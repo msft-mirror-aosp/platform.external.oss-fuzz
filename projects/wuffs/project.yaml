@@ -1,5 +1,4 @@
 homepage: "https://github.com/google/wuffs"
-language: c++
 primary_contact: "nigeltao@golang.org"
 fuzzing_engines:
   - libfuzzer
@@ -13,4 +12,3 @@ sanitizers:
 architectures:
   - x86_64
   - i386
-main_repo: 'https://github.com/google/wuffs.git'

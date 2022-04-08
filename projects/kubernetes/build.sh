@@ -20,21 +20,17 @@ set -o pipefail
 set -o errexit
 set -x
 
-# Compile kOps fuzzers
-(
-cd kops
-./tests/fuzz/build.sh
-)
-
-# Compile Kubernetes fuzzers
-cd $SRC/kubernetes
-
+# Based on the function from oss-fuzz/projects/golang/build.sh script.
 function compile_fuzzer {
   local pkg=$1
   local function=$2
   local fuzzer="${pkg}_${function}"
 
-  compile_go_fuzzer "k8s.io/kubernetes/test/fuzz/${pkg}" $function $fuzzer
+   # Instrument all Go files relevant to this fuzzer
+  go-fuzz-build -libfuzzer -func "${function}" -o "${fuzzer}.a" "k8s.io/kubernetes/test/fuzz/${pkg}"
+
+   # Instrumented, compiled Go ($fuzzer.a) + fuzzing engine = fuzzer binary
+  $CXX $CXXFLAGS $LIB_FUZZING_ENGINE "${fuzzer}.a" -lpthread -o "${OUT}/${fuzzer}"
 }
 
 compile_fuzzer "yaml" "FuzzDurationStrict"

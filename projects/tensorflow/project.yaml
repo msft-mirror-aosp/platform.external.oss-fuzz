@@ -1,10 +1,9 @@
 homepage: "https://www.tensorflow.org"
-language: c++
 primary_contact: "mihaimaruseac@google.com"
 auto_ccs:
- - "amitpatankar@google.com"
+ - "dga@google.com"
+ - "frankchn@google.com"
+fuzzing_engines:
+  - libfuzzer
 sanitizers:
   - address
-  - undefined
-  - memory
-main_repo: 'https://github.com/tensorflow/tensorflow'

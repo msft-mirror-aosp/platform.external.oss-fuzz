@@ -15,25 +15,17 @@
 #
 ################################################################################
 
-cmake -Dsctp_build_programs=0 -Dsctp_debug=0 -Dsctp_invariants=1 -Dsctp_build_fuzzer=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo .
+cmake -Dsctp_build_programs=0 -Dsctp_debug=0 -Dsctp_invariants=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo .
 make -j$(nproc)
 cd fuzzer
 
-TARGETS="fuzzer_connect fuzzer_listen fuzzer_fragment"
+TARGETS="fuzzer_connect fuzzer_listen"
 
-CORPUS="CORPUS_CONNECT CORPUS_LISTEN CORPUS_FRAGMENT"
-
-while [ -n "$TARGETS" ]
-do
-        target=`echo "$TARGETS" | cut -d ' ' -f 1`
-        TARGETS=`echo "$TARGETS" | sed 's/[^ ]* *\(.*\)$/\1/'`
-        corpus=`echo "$CORPUS" | cut -d ' ' -f 1`
-        CORPUS=`echo "$CORPUS" | sed 's/[^ ]* *\(.*\)$/\1/'`
-
+for target in $TARGETS; do
         $CC $CFLAGS -DFUZZING_STAGE=0 -I . -I ../usrsctplib/ -c ${target}.c -o $OUT/${target}.o
         $CXX $CXXFLAGS -o $OUT/${target} $OUT/${target}.o $LIB_FUZZING_ENGINE ../usrsctplib/libusrsctp.a
         rm -f $OUT/${target}.o
-
-        zip -jr ${target}_seed_corpus.zip ${corpus}/
-        cp ${target}_seed_corpus.zip $OUT/
 done
+
+zip -jr fuzzer_connect_seed_corpus.zip CORPUS_CONNECT/
+cp fuzzer_connect_seed_corpus.zip $OUT/

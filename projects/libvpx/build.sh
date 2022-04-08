@@ -31,7 +31,6 @@ else
 fi
 
 LDFLAGS="$CXXFLAGS" LD=$CXX $SRC/libvpx/configure \
-    --enable-vp9-highbitdepth \
     --disable-unit-tests \
     --disable-examples \
     --size-limit=12288x12288 \

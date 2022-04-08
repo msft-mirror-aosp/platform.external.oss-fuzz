@@ -1,5 +1,4 @@
 homepage: "http://www.libpng.org/pub/png/libpng.html"
-language: c++
 primary_contact: "kcc@google.com"
 sanitizers:
   - undefined

@@ -1,5 +1,4 @@
 homepage: "https://github.com/google/double-conversion"
-language: c++
 primary_contact: "florian@loitsch.com"
 auto_ccs:
   - "sbucur@google.com"
@@ -13,4 +12,3 @@ labels:
 architectures:
   - x86_64
   - i386
-main_repo: 'https://github.com/google/double-conversion.git'

@@ -1,5 +1,4 @@
 homepage: "https://www.djangoproject.com/"
-language: c++
 primary_contact: "guidovranken@gmail.com"
 auto_ccs:
  - "f.apolloner@gmail.com"
@@ -7,7 +6,5 @@ auto_ccs:
  - "jammamarkus@gmail.com"
 fuzzing_engines:
   - libfuzzer
-  - honggfuzz
 sanitizers:
  - undefined
-main_repo: 'https://github.com/django/django.git'

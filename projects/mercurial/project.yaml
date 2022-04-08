@@ -1,5 +1,4 @@
 homepage: "https://www.mercurial-scm.org/"
-language: c++
 primary_contact: "durin42@gmail.com"
 auto_ccs:
   - "gregory.szorc@gmail.com"
@@ -10,4 +9,3 @@ sanitizers:
   - address
   - undefined
   - memory
-coverage_extra_args: -ignore-filename-regex=.*/sanpy/.*

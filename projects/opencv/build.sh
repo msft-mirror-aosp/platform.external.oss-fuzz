@@ -30,10 +30,7 @@ make install
 popd
 
 pushd $SRC
-for fuzzer in core_fuzzer filestorage_read_file_fuzzer \
-   filestorage_read_filename_fuzzer filestorage_read_string_fuzzer \
-   generateusergallerycollage_fuzzer imdecode_fuzzer imencode_fuzzer \
-   imread_fuzzer; do
+for fuzzer in imdecode_fuzzer imread_fuzzer; do
 $CXX $CXXFLAGS $LIB_FUZZING_ENGINE $fuzzer.cc -std=c++11 \
 -I$install_dir/include/opencv4 -L$install_dir/lib \
 -L$install_dir/lib/opencv4/3rdparty \
@@ -41,7 +38,7 @@ $CXX $CXXFLAGS $LIB_FUZZING_ENGINE $fuzzer.cc -std=c++11 \
 -lopencv_stitching -lopencv_video -lopencv_calib3d -lopencv_features2d \
 -lopencv_highgui -lopencv_videoio -lopencv_imgcodecs -lopencv_imgproc \
 -lopencv_flann -lopencv_core -llibjpeg-turbo -llibwebp -llibpng -llibtiff \
--llibopenjp2 -lIlmImf -llibprotobuf -lquirc -lzlib -littnotify -lippiw \
+-llibjasper -lIlmImf -llibprotobuf -lquirc -lzlib -littnotify -lippiw \
 -lippicv -lade -ldl -lm -lpthread -lrt \
 -o $OUT/$fuzzer
 done

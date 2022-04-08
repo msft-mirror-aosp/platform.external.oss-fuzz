@@ -15,11 +15,10 @@
 #
 ################################################################################
 
-export LDSHARED=lld
+export LDSHARED=$CXX
 export LDFLAGS="$CFLAGS -stdlib=libc++"
-
 ./configure
-
+sed -i "/^LDSHARED=.*/s#=.*#=$CXX#" Makefile
 sed -i 's/$(CC) $(LDFLAGS)/$(CXX) $(LDFLAGS)/g' Makefile
 
 make -j$(nproc) clean

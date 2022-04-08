@@ -1,5 +1,4 @@
 homepage: "https://opencv.org/"
-language: c++
 primary_contact: "garybradski@gmail.com"
 
 auto_ccs:
@@ -19,4 +18,3 @@ labels:
     - sundew
   imread_fuzzer:
     - sundew
-main_repo: 'https://github.com/opencv/opencv.git'

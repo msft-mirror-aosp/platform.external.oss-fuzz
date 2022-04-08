@@ -1,4 +1,4 @@
-# Copyright 2021 Google LLC
+# Copyright 2016 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,9 +15,10 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
+MAINTAINER matt@ucc.asn.au
 RUN apt-get update && apt-get install -y libz-dev autoconf mercurial
-RUN hg clone https://hg.ucc.asn.au/dropbear-fuzzcorpus dropbear-corpus
-RUN git clone https://github.com/mkj/dropbear dropbear
+RUN hg clone https://secure.ucc.asn.au/hg/dropbear dropbear
+RUN hg clone https://secure.ucc.asn.au/hg/dropbear-fuzzcorpus dropbear/corpus
 WORKDIR dropbear
 COPY build.sh *.options $SRC/
 

@@ -1,5 +1,4 @@
 homepage: "https://www.freetype.org/"
-language: c++
 primary_contact: "lemzwerg@gmail.com"
 auto_ccs:
   - "darnold@adobe.com"
@@ -17,4 +16,3 @@ vendor_ccs:
 sanitizers:
   - address
   - undefined
-main_repo: 'https://github.com/freetype/freetype2-testing.git'

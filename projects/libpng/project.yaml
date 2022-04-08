@@ -1,5 +1,4 @@
 homepage: "http://www.libpng.org/pub/png/libpng.html"
-language: c++
 primary_contact: "glennrp@gmail.com"
 vendor_ccs:
   - "aosmond@mozilla.com"
@@ -9,4 +8,3 @@ sanitizers:
   - address
   - memory
   - undefined
-main_repo: 'https://github.com/glennrp/libpng.git'

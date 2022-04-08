@@ -23,115 +23,96 @@
 
 #include <mupdf/fitz.h>
 
-#define ALIGNMENT ((size_t) 16)
-#define KBYTE ((size_t) 1024)
-#define MBYTE (1024 * KBYTE)
-#define GBYTE (1024 * MBYTE)
-#define MAX_ALLOCATION (1 * GBYTE)
+#define ALIGNMENT 16
+#define MAX_ALLOCATION (1024 * 1024 * 1024)
 
-static size_t used;
+static uint64_t total = 0;
 
-static void *fz_limit_reached_ossfuzz(size_t oldsize, size_t size)
+static void *
+fz_malloc_ossfuzz(void *opaque, size_t size)
 {
-  if (oldsize == 0)
-    fprintf(stderr, "limit: %zu Mbyte used: %zu Mbyte allocation: %zu: limit reached\n", MAX_ALLOCATION / MBYTE, used / MBYTE, size);
-  else
-    fprintf(stderr, "limit: %zu Mbyte used: %zu Mbyte reallocation: %zu -> %zu: limit reached\n", MAX_ALLOCATION / MBYTE, used / MBYTE, oldsize, size);
-  fflush(0);
-  return NULL;
+	char *ptr = NULL;
+
+	if (size == 0)
+		return NULL;
+	if (size > SIZE_MAX - ALIGNMENT)
+		return NULL;
+
+	if (size > MAX_ALLOCATION - ALIGNMENT - total)
+		return NULL;
+
+	ptr = (char *) malloc(size + ALIGNMENT);
+	if (ptr == NULL)
+		return NULL;
+
+	memcpy(ptr, &size, sizeof(size));
+	total += size + ALIGNMENT;
+
+	return ptr + ALIGNMENT;
 }
 
-static void *fz_malloc_ossfuzz(void *opaque, size_t size)
+static void
+fz_free_ossfuzz(void *opaque, void *ptr)
 {
-  char *ptr = NULL;
+	size_t size;
 
-  if (size == 0)
-    return NULL;
-  if (size > SIZE_MAX - ALIGNMENT)
-    return NULL;
-  if (size + ALIGNMENT > MAX_ALLOCATION - used)
-    return fz_limit_reached_ossfuzz(0, size + ALIGNMENT);
+	if (ptr == NULL)
+		return;
 
-  ptr = (char *) malloc(size + ALIGNMENT);
-  if (ptr == NULL)
-    return NULL;
+	ptr = ((char *) ptr) - ALIGNMENT;
 
-  memcpy(ptr, &size, sizeof(size));
-  used += size + ALIGNMENT;
-
-  return ptr + ALIGNMENT;
+	memcpy(&size, ptr, sizeof(size));
+	total -= size - ALIGNMENT;
+	free(ptr);
 }
 
-static void fz_free_ossfuzz(void *opaque, void *ptr)
+static void *
+fz_realloc_ossfuzz(void *opaque, void *old, size_t size)
 {
-  size_t size;
+	size_t oldsize;
+	char *ptr;
 
-  if (ptr == NULL)
-    return;
-  if (ptr < (void *) ALIGNMENT)
-    return;
+	if (old == NULL)
+		return fz_malloc_ossfuzz(opaque, size);
+	if (size == 0)
+	{
+		fz_free_ossfuzz(opaque, old);
+		return NULL;
+	}
+	if (size > SIZE_MAX - ALIGNMENT)
+		return NULL;
 
-  ptr = (char *) ptr - ALIGNMENT;
-  memcpy(&size, ptr, sizeof(size));
+	old = ((char *) old) - ALIGNMENT;
+	memcpy(&oldsize, old, sizeof(oldsize));
 
-  used -= size + ALIGNMENT;
-  free(ptr);
-}
+	if (size > MAX_ALLOCATION - total + oldsize)
+		return NULL;
 
-static void *fz_realloc_ossfuzz(void *opaque, void *old, size_t size)
-{
-  size_t oldsize;
-  char *ptr;
+	ptr = (char *) realloc(old, size + ALIGNMENT);
+	if (ptr == NULL)
+		return NULL;
 
-  if (old == NULL)
-    return fz_malloc_ossfuzz(opaque, size);
-  if (old < (void *) ALIGNMENT)
-    return NULL;
+	total -= oldsize + ALIGNMENT;
+	memcpy(ptr, &size, sizeof(size));
+	total += size + ALIGNMENT;
 
-  if (size == 0) {
-    fz_free_ossfuzz(opaque, old);
-    return NULL;
-  }
-  if (size > SIZE_MAX - ALIGNMENT)
-    return NULL;
-
-  old = (char *) old - ALIGNMENT;
-  memcpy(&oldsize, old, sizeof(oldsize));
-
-  if (size + ALIGNMENT > MAX_ALLOCATION - used + oldsize + ALIGNMENT)
-    return fz_limit_reached_ossfuzz(oldsize + ALIGNMENT, size + ALIGNMENT);
-
-  ptr = (char *) realloc(old, size + ALIGNMENT);
-  if (ptr == NULL)
-    return NULL;
-
-  used -= oldsize + ALIGNMENT;
-  memcpy(ptr, &size, sizeof(size));
-  used += size + ALIGNMENT;
-
-  return ptr + ALIGNMENT;
+	return ptr + ALIGNMENT;
 }
 
 static fz_alloc_context fz_alloc_ossfuzz =
 {
-  NULL,
-  fz_malloc_ossfuzz,
-  fz_realloc_ossfuzz,
-  fz_free_ossfuzz
+	NULL,
+	fz_malloc_ossfuzz,
+	fz_realloc_ossfuzz,
+	fz_free_ossfuzz
 };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-  fz_context *ctx;
-  fz_stream *stream;
-  fz_document *doc;
-  fz_pixmap *pix;
+  fz_context *ctx = fz_new_context(&fz_alloc_ossfuzz, nullptr, FZ_STORE_DEFAULT);
 
-  used = 0;
-
-  ctx = fz_new_context(&fz_alloc_ossfuzz, nullptr, FZ_STORE_DEFAULT);
-  stream = NULL;
-  doc = NULL;
-  pix = NULL;
+  fz_stream *stream = NULL;
+  fz_document *doc = NULL;
+  fz_pixmap *pix = NULL;
 
   fz_var(stream);
   fz_var(doc);

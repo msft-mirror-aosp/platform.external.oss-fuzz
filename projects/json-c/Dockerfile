@@ -15,7 +15,8 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && apt-get install -y make cmake
+MAINTAINER chriswwolfe@gmail.com
+RUN apt-get update && apt-get install -y make autoconf automake libtool
 RUN git clone --depth 1 https://github.com/json-c/json-c.git json-c
 WORKDIR json-c
 COPY build.sh *.cc *.dict $SRC/

@@ -15,9 +15,23 @@
 #
 ################################################################################
 
-cargo fuzz build -O
+# moz.build
+$CC $CFLAGS -c \
+  -DNDEBUG -msse -msse2 -Wno-missing-field-initializers \
+  chain.c \
+  iccread.c \
+  matrix.c \
+  transform.cpp \
+  transform-sse1.cpp \
+  transform-sse2.cpp \
+  transform_util.c
 
-find fuzz -iname "*.icc" \
+$CXX $CXXFLAGS -std=c++11 \
+  -I. *.o \
+  -DBUILD_FOR_OSSFUZZ \
+  $LIB_FUZZING_ENGINE \
+  fuzztest/qcms_fuzzer.cpp -o $OUT/fuzz
+
+find fuzztest -iname "*.icc" \
   -type f -exec zip -qju $OUT/fuzz_seed_corpus.zip "{}" \;
-cp fuzz/qcms_fuzzer.dict $OUT/fuzz.dict
-cp fuzz/target/x86_64-unknown-linux-gnu/release/fuzz_target_qcms $OUT/fuzz
+cp fuzztest/qcms_fuzzer.dict $OUT/fuzz.dict

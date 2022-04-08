@@ -15,7 +15,9 @@
 ################################################################################
 
 FROM gcr.io/oss-fuzz-base/base-builder
-RUN apt-get update && \
+MAINTAINER alex.gaynor@gmail.com
+RUN dpkg --add-architecture i386 && \
+    apt-get update && \
     apt-get install -y autoconf gettext libtool m4 automake pkg-config libexpat-dev libexpat-dev:i386
 RUN git clone --depth 1 https://github.com/lathiat/avahi
 WORKDIR avahi

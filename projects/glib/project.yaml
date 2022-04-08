@@ -1,5 +1,4 @@
-homepage: "https://gitlab.gnome.org/GNOME/glib/"
-language: c++
+homepage: "https://www.gnu.org/directory/glib.html"
 primary_contact: "bugzilla@tecnocode.co.uk"
 auto_ccs:
 - philip.withnall@gmail.com
@@ -10,4 +9,3 @@ sanitizers:
 - undefined
 - memory
 help_url: https://gitlab.gnome.org/GNOME/glib/tree/master/fuzzing#how-to-reproduce-oss-fuzz-bugs-locally
-main_repo: 'https://gitlab.gnome.org/GNOME/glib'

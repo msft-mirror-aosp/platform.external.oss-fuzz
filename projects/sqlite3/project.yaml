@@ -1,9 +1,8 @@
 homepage: "https://sqlite.org/"
-language: c++
 primary_contact: "drhsqlite@gmail.com"
 auto_ccs:
   - "sboydps@gmail.com"
-  - "twsmith@mozilla.com"
+  - "cdiehl@mozilla.com"
 sanitizers:
   - address
   - memory
