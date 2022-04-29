@@ -44,12 +44,3 @@ license {
         "LICENSE",
     ],
 }
-
-cc_fuzz {
-    name: "ossfuzz-libldac-encode_fuzzer",
-    static_libs: ["libldacBT_enc"],
-    srcs: ["projects/libldac/libldac_encode_fuzzer.cc"],
-    fuzz_config: {
-        componentid: 27441
-    },
-}
