@@ -16,9 +16,7 @@
 ################################################################################
 
 # Build boost
-CXXFLAGS="$CXXFLAGS -stdlib=libc++ -pthread" LDFLAGS="-stdlib=libc++" \
-    ./bootstrap.sh --with-toolset=clang --prefix=/usr;
-./b2 toolset=clang cxxflags="$CXXFLAGS -stdlib=libc++ -pthread" linkflags="-stdlib=libc++ -pthread" headers;
+./bootstrap.sh && ./b2 headers
 
 # Very simple build rule, but sufficient here.
 #boost regexp
