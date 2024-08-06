@@ -1,3 +1,3 @@
-mitchp@google.com
-enh@google.com
-# asa-haiku-core@google.com
+# Please go through go/android-3p process if you need this project in the future.
+
+include platform/system/core:/janitors/OWNERS
